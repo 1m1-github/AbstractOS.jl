@@ -1,6 +1,8 @@
 # AbstractOS-infoOS-juliaOS-MagicOS-HumanOS
 next gen OS: speak to your OS and it will do ... anything
 
+an OS that learns together with a human...to become arbitrarily complex
+
 # UI
 human user talks to OS
 OS shows information visually or with audio
