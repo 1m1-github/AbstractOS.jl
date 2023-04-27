@@ -1,4 +1,4 @@
-# AbstractOS-infoOS-juliaOS-MagicOS
+# AbstractOS-infoOS-juliaOS-MagicOS-HumanOS
 next gen OS: speak to your OS and it will do ... anything
 
 # UI
@@ -42,11 +42,17 @@ each interaction with the OS is the OS running some with some input info and wri
 perhaps later; for now, such an OS can be run inside each other! each OS instance can be a VM
 
 # ML to write code
-e.g. a GPT learns how to code the OS learning on julia base all added code
+e.g. a Transformer learns how to code the OS learning on julia base all added code
 
 # more ML
 ML (e.g. Whisper) converts audio to text
 ML (e.g. GAN) to create visual or audio output
 
+# use cases
+any device used by humans
+
+# Humans
+literally for humans: the OS that takes human input and gives arbitrarily complex output
+  
 # stream
 https://youtube.com/live/Gatf8ltrMKQ
