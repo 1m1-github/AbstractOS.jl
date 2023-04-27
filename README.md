@@ -71,6 +71,20 @@ info contains info
 # Typing
 it is the clean julia typing system that allows for the flexible decoding of arbitrary info
 
+# API
+julia
+run(code::Code<:Info, input::Info) :: Info
+
+# MVP
+e.g.
+bmp on filesystem -> ask OS to show file (as a bmp, specified or set by default by this info)
+OS cannot (pure julia has no show_bmp function)
+human guides OS: open file byte by byte, extra RBP from each byte, draw a canvas with pixel of RGB, show canvas
+OS learns via documentation of above function
+ask OS to show file and it does
+ask OS to show folder full of bmp files with 10 seconds apart -> OS writes correct code
+OS knows how to use a loop to run the folder task once it knows how to do a single file
+OS and human together (as cyborg) created a bmp caroussel on a system that could not within a minute
 
 # stream
 https://youtube.com/live/Gatf8ltrMKQ
