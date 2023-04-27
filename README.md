@@ -86,6 +86,12 @@ ask OS to show folder full of bmp files with 10 seconds apart -> OS writes corre
 OS knows how to use a loop to run the folder task once it knows how to do a single file  
 OS and human together (as cyborg) created a bmp caroussel on a system that could not within a minute  
 
+# Modular
+any model or part can be updated to improve performance
+  
+# App: FairInbox
+each OS comes with a FairInbox for fair communication
+  
 # stream
 https://youtube.com/live/Gatf8ltrMKQ
 https://youtube.com/live/OmXb3P9ZXgA
