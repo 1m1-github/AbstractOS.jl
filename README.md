@@ -47,3 +47,6 @@ e.g. a GPT learns how to code the OS learning on julia base all added code
 # more ML
 ML (e.g. Whisper) converts audio to text
 ML (e.g. GAN) to create visual or audio output
+
+# stream
+https://youtube.com/live/Gatf8ltrMKQ
