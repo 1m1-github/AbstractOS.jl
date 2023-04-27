@@ -25,6 +25,8 @@ an app only provides an API. what used to be a menu on the top (etc. 'File','Edi
 
 e.g. a image viewer app had a button called 'Left Rotate'; instead of clicking on that button, the user simply says "rotate it left" and the ML creates code learned from the documentation of all the available code in the OS including the apps and the ML writes code to call the app's rotate_left API method which outputs information respresenting the rotated image, which can be decoding as an image on a socket (e.g. screen)
 
+all API methods should be descriptive in human language
+
 # Code
 initially, the OS can do what julia can do. the user then combines code to create more useful code. e.g. the user asks the OS to write code to show a website. this code combines downloading over HTTPS then rendering HTML. the OS writes this function including documentation making this function part of the language that the OS understands.
 
@@ -53,6 +55,22 @@ any device used by humans
 
 # Humans
 literally for humans: the OS that takes human input and gives arbitrarily complex output
-  
+
+# Sharing
+simple sharing of arbitrary information
+
+# VM
+each VM is a powerful virtual computer and can contain further VMs inside without limit
+
+# Reputation
+for sharing of info (to be run as code or not)
+
+# info
+info contains info
+
+# Typing
+it is the clean julia typing system that allows for the flexible decoding of arbitrary info
+
+
 # stream
 https://youtube.com/live/Gatf8ltrMKQ
