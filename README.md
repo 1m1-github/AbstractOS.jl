@@ -92,7 +92,7 @@ OS and human together (as cyborg) created a bmp caroussel on a system that could
 any model or part can be updated to improve performance
   
 # App: FairInbox
-each OS comes with a FairInbox for fair communication
+each OS comes with a FairInbox for fair communication (https://github.com/1m1-github/FairInbox)
   
 # stream
 https://youtube.com/live/Gatf8ltrMKQ
