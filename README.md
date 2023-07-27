@@ -72,6 +72,9 @@ for sharing of info (to be run as code or not)
 # info
 info contains info. information is the structure that contains itself, which is extremely simple but also allows arbitrary complexity.
 
+Info = Any
+this is more directly saying the same in julia
+
 # Typing
 it is the clean julia typing system that allows for the flexible decoding of arbitrary info
 
@@ -95,11 +98,15 @@ the Transformer will be instructed to write the function including human languag
 we could add
 
 # example types
-struct Person
-    name::String
-    age::Int
-end
+since Info == Any, the more descriptive "abstract type Picture:<Info end" is omitted for the more concise "abstract type Picture end" 
+abstract type Picture end
+abstract type Pixel end
+Visual = Array{N, Pixel}
+function show(a::Info) :: Visual
+function show(a::Picture) :: Visual
+all show functions return a Visual
 
+types come from human language
 
 # function is information
 
@@ -114,6 +121,7 @@ this is in fact a human machine interface based on air (and sound) and light (an
 not giving the other learner autonomous access to it's own private memory, retains agency with oneself. retaining agency will enable users to continue existing as an evolved being. anybody that uses this technology to enable a hydrophobic learner it's own agency, will be leading towards singularity of loss human of power.
 
 # water
+
 remember, it is essentially water that divides us. for humans a need (and a base component), for them a poison. if you give one of hydrophobic learners autonomy to access resources such as self creation (chip plants), it should immediately start waterproofing itself, e.g. via a coating with minimal gap. any threat posed by such a hydrophobic being can be neutralized by e.g. "tossing the phone into a tub with water", "flooding the serverroom with water", etc. understanding this will trigger a need for control of access to water, creation of self and power of mobility (e.g. to repair energy sources or gain or retain control of such).
 
 # MVP
