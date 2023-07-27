@@ -131,15 +131,13 @@ OS and human together (as cyborg) created a bmp caroussel on a system that could
 any model or part can be updated to improve performance
   
 # App: FairInbox
-each OS comes with a FairInbox for fair communication
+each OS comes with a FairInbox for fair communication (https://github.com/1m1-github/FairInbox)
   
 # stream
 https://youtube.com/live/Gatf8ltrMKQ
 https://youtube.com/live/OmXb3P9ZXgA
 https://youtube.com/live/mOcz-A-55vc
+https://youtu.be/7Dc3Y8sJbaE
 
 # text to regexp // needed?
 https://github.com/1m1-github/Text2juliaRegExp
-
-# the code
-
