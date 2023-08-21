@@ -1,0 +1,112 @@
+import 'package:flutter/material.dart';
+import 'success.dart';
+
+class CVProviderModel extends ChangeNotifier {
+  List<String> keywordList = [];
+  List<String> keywords = [];
+
+  bool isOpenSuggestionView = false;
+
+  List<SuccessData> mainCvList = [];
+
+  // 1M1
+const SuccessData(title: 'languages', timestamp: 2532614400, tags: ['languages'], description: '''
+  by living and growing up in over 10 countries, across continents and cultures, i have over my life time spoken 11 human languages, with at least basic fluency ~ some i have forgotten and still speak 7 human languages
+  furthermore, i have coded in ca. 30 computer languages and i love learning new technologies 
+  tip: i have found that to learn a language, one has to simply force oneself to use only that language plus body language ~ beginning with a word, your vocab will increase everyday and you will be fluent within half a year
+  also, learn the word "opposite" in your target language, as it basically doubles your vocab (you know a word X, ask a local "opposite X?")
+'''),
+    const SuccessData(title: 'automated online lending system', timestamp: 1569888000, tags: ['GCP', 'app', 'javascript', 'vue', 'CTO', 'IT', 'finance'], description: '''
+implemented a high performance GCP based infrastructure to run a fully automated micro financing system
+• serverless backend, highly scalable and secure
+• IT infrastructure based on GCP
+• connected to a machine learning based credit risk model
+• frontend written in vue: I wrote the first version, which was improved by frontend pros
+
+The system itself was shutdown due to lack of funding even though the tech worked well
+'''),
+    const SuccessData(title: 'web app using .NET', timestamp: 1451606400, tags: ['app', '.NET', 'C#', 'award', 'Axpo'], description: '''
+together with another software engineer, we implemented a front end client-facing web app for Axpo AG, Switzerland.
+this was a replacement for an existing app, which Axpo had asked me to improve. the original version had cost hundreds of thousands of Swiss Franks and several years to create.
+the original app was extremely buggy, e.g. it needed a daily server restart.
+instead of improving the existing app, i insisted and remade everything from scrath in 2 weeks. the new version was stable and much faster than the original.
+we received bonus rewards from Axpo beyond the agreed renumeration for this extra ordinary effort.
+'''),
+    const SuccessData(
+        title: 'Prophet: A system to run server models in various languages',
+        timestamp: 1420070400,
+        tags: ['protobuf', 'C#', 'python', 'julia', 'VBA', '.NET', 'smart contracts'],
+        description: '''
+this framework allowed quants to write (financial) models in various languages.
+no matter the language chosen, the users could run the models in the Excel frontend.
+• languages supported: C#, Python, julia, VBA.
+• RabbitMQ for messaging
+• Google protobuf for encoding
+• in partnership with Axpo AG, in a team of 3 coders
+'''),
+    const SuccessData(title: 'private video chat web app using WebSockets', timestamp: 1435708800, tags: ['WebSocket', 'app', 'javascript'], description: '''
+• implemented a simple web app right after WebSockets were created
+• my opinion was that peer-to-peer web app data communications will revolutionise the world
+
+result: It worked and was used by family members only. Never marketed
+'''),
+    const SuccessData(title: 'flights meta search', timestamp: 1243836600, tags: ['app', 'perl', 'travel', 'e-bookers', 'MySQL'], description: '''
+• implemented a flexible flights search
+• users needed to choose 4 parameters: earliest departure, latest return, shortest and longest duration
+• based on these parameters, the app made multiple searches on ebookers (which allowed +- 3 day searches)
+• the result was a triangular matrix showing the best prices
+• i used this tool personally for years to find cheap flights for my family
+• the app was never commersialised based on a flawed understanding of e-business: i thought ebookers (or any other site), does not actually like my traffic and could ban me any second
+'''),
+    const SuccessData(title: 'won a pattern recognition competition run by Prof. Ziegler', timestamp: 986083200, tags: ['math', 'ML', 'AI', 'award'], description: '''
+• entered a competition run by Prof. Ziegler at the Technical University of Berlin
+• the competition was to write a algorithm to predict binary human choices
+• humans were asked to enter 1 xor 0 thousands of times, as randomly as possible
+• Prof. Ziegler explained that he himself competed amongst professors and researchers at a math conference with the exact same goal. And his algorithm was the winner
+• my algorithm ended up winning and beating Prof. Zieglers' algorithm. my result had ca. 82% accuracy
+• received a signed book by Prof. Ziegler which I soon lent to a friend --- friend, where are you nowadays? the book was a collection of the most beautiful math proofs, written by Prof. Zieglier.
+'''),
+    const SuccessData(title: 'coded system to archive incoming fax as digital documents', timestamp: 988675200, tags: ['C++', 'windows', 'linux'], description: '''
+• on arriving fax, the system saved and archived the document digitally
+• written for Carano Software, Berlin
+            '''),
+    const SuccessData(
+        title: 'coded neural network for audio vowel classification incl. GUI for admin',
+        timestamp: 993945600,
+        tags: ['ML', 'AI', 'math', 'GUI', 'tcl', 'tk', 'C++'],
+        description: '''
+• given audio recordings of each (German) vowel, the system should learn to categorise into vowels
+• MLP as neural architecture
+• FFT for audio signal transformation
+• coded at the Technical University of Berlin
+• machine learning code in C++
+• GUI in tcl/tk
+• result: i worked on this project alone, whereas others worked in teams. it was an intensive summer, of coding day and night, practically living at the university. at the end, after nearly losing my mind, the system worked! it was one of the most amazing things I had seen: a machine had learned to recognise human vowels from audio. that was the beginning of my love for Machine Learning.
+'''),
+    const SuccessData(title: 'attended and passed Analysis at uni during high school', timestamp: 904608000, tags: ['math', 'certification'], description: '''
+started attending university math lectures at the age of 16, two years before graduating high school. it was where I belonged, on the green campus of the Free University of Berlin.
+i did the homework, passed the courses and received the credit which i could have used later.
+            '''),
+    const SuccessData(title: 'coded graphical labyrinth game', timestamp: 825638400, tags: ['pascal', 'game'], description: '''
+since ca. 8 years old, I had been coding a lot. most of them I cannot remember.
+the one game i do remember was a graphical labyrinth game which only showed the immediate surroundings of the user.
+i even remember coding and formatting my computer without a screen, which my mother took away, thinking that was the computer. that is how intimate I was with my computer. i knew what it was doing based on my commands and the sounds it would make.
+            '''),
+    const SuccessData(title: 'worked at UBS QRC', timestamp: 1249084800, tags: ['math', 'UBS', 'finance'], description: '''
+i had the amazing pleasure of working at the QRC Team at UBS, in Zurich, Switzerland.
+the QRC (Quantitative Risk Control) team consisted of the most talented indivuals that I had ever seen.
+not only were the team members mostly PhDs in Math or Theoretical Physics, they were Olympiad Medalist winners or similar.
+and then there was me.
+getting in was an extremely difficult experience. after being told 'no' by HR, I insisted and got an interview.
+conducting the first interviews on the phone, I had to solve math problems in my head because I thought it would just be a friendly call. i was wrong.
+afterwards, I spent an entire day being asked tough math questions by around 10 people. at the end, HR again rejected me, but the team wanted me.
+against all odds, i got the job. i would go on to get a 'record time' promotion, aparently 'unheard of', after less than 6 months at UBS, during the height of the 2009 financial crisis.
+            '''),
+    const SuccessData(title: 'wrote independent proof for uncountability and sparsity of the Cantor set', timestamp: 1038771048, tags: ['math', 'research'], description: '''
+          in my 2nd year at Humboldt Universität zu Berlin, Prof. Naumann showed us an advanced proof for the uncountability and 0 Lebueque measure of the Cantor set.
+          he remarked that he did not know of any elementary proof for this statement and that this was surprising. i took the challenge and produced an elementary proof after 2 months of thinking.
+          Prof. Naumann was impressed and decided to co-publish and name the central function used after my name. before publishing, for due diligence, Prof. Naumann checked whether this proof was really novel.
+          it was not; the exact same proof had been published in the 1970s and he had just not heard about it before.
+          that made my proof not novel but still counts as independent research.
+            '''),
+  ];

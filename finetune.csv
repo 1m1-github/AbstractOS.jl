@@ -1,0 +1,1 @@
+{"prompt": "double", "completion": "\"\"\"\n    double(x)\n\nGiven an integer `x`, returns the value of `x` doubled.\n\n# Examples\n```julia-repl\njulia> double(10)\n20\njulia> double(-5)\n-10\n```\n\"\"\"\nfunction double(x::Int)\n    return 2*x\nend\n"}

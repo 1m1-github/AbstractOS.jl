@@ -1,0 +1,17 @@
+Dear Hiring Manager,
+
+I am excited to apply for the Typescript AT Protocol implementation position at Bluesky. With over 4 years of experience in Typescript development, I am confident that I have the skills and knowledge necessary to contribute to your team.
+
+Throughout my career, I have honed my skills in data structures and software design principles, as well as experience in working with Postgres at scale and distributed systems. I have built scalable and high-performance server-side applications and am comfortable working with small, fast-moving teams. I have also worked on social sites in the past and am familiar with cryptographic primitives such as public/private keys and merkle trees.
+
+I am excited about the opportunity to contribute to Bluesky’s mission to transition the social web from platforms to protocols. The chance to build a federated social network where users have more power is inspiring, and I am thrilled at the prospect of writing protocol and backend code that will play such a critical part in transforming social media.
+
+As a completed project, I have created an automated lending system running on GCP using JavaScript and Vue, and implemented a flexible flight search application using Perl and MySQL.
+
+I have also created a neural network for audio vowel classification using C++, Tcl, and Tk, as well as an automated system for archiving incoming fax documents for Carano Software using C++ on both Windows and Linux platforms. Moreover, I have authored a few proofs, an independent and elementary proof for the uncountability and sparsity of the Cantor set, and together with a colleague a front-end client-facing web app for Axpo AG, Switzerland.
+
+I am impressed by Bluesky’s dedication to empowering users on the social web and am eager to contribute to this vision. Thank you for taking the time to consider my application. Please find my resume and previous works on my Github page, and I look forward to speaking with you further about this opportunity.
+
+Sincerely,
+
+[Your Name]
