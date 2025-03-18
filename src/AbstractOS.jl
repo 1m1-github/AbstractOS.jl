@@ -1,13 +1,5 @@
 module AbstractOS
 
-export init
-
-
-
-init() # connect to learners
-
-function next(x)
-    
-end
+import "core.jl"
 
 end # module
