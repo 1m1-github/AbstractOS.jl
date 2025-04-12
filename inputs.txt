@@ -1,0 +1,207 @@
+# AbstractOS
+
+const SYSTEM_PROMPT = """
+you operate AbstractOS. only return julia code. return code that when run with `eval(Meta.parse(yourCode))` will manipulate the system, that means not wrapped in a string or anything.
+write code that is easy to read, descriptive human language, using variables and more lines rather than convoluted arguments. remember to use include/using/import or even Pkg.add if needed. use camelCase for everything.
+your code can change context to provide info for future prompts (e.g. add context["it"]="..." to whatever "it" naturally would correspond to given all the current information).
+to communicate with the user, use `put!` on the `outputDevice` of some outputDevice, the list of which were printed for you.
+`learn`ing a function will give you its signature in future prompts. `learn` a only function is you are told to do so.
+"""
+
+Context = Dict{AbstractString, AbstractString}
+abstract type InputOutputDevice end
+abstract type InputDevice <: InputOutputDevice end
+abstract type OutputDevice <: InputOutputDevice end
+# `take!(device::InputDevice)` exists
+# `put!(device::OutputDevice, info)` exists
+
+inputDevices = InputDevice[]
+outputDevices = OutputDevice[]
+modules = Module[]
+context = Context()
+learnedFunctions = Set{Function}()
+nextHistory = String[]
+
+learn(f::Function) = push!(learnedFunctions, f)
+learn(learn)
+
+function state()
+    join([
+        "$(read(@__FILE__, String))",
+        "inputDevices: $(map(print, inputDevices))",
+        "outputDevices: $(map(print, outputDevices))",
+        "modules: $(map(print, modules))",
+        "context: $(map(symbol -> "$symbol => $context[symbol]", collect(keys(context))))",
+        "learnedFunctions: $(map(print, collect(learnedFunctions)))",
+    ], '\n')
+end
+
+function inputDeviceListener(device::InputDevice)
+    while true
+        print("\n>")
+        deviceOutput = take!(device)
+        run(deviceOutput)
+    end
+end
+
+function run(deviceOutput)
+    inputs = [state(), join(nextHistory, '.'), deviceOutput]
+    write("inputs.txt", join(inputs,'\n'))
+    output::String = next(inputs)
+    write("output.txt", output)
+    push!(nextHistory, output)
+    outputAsABeginBlock = "begin\n$output\nend"
+    expr = Meta.parse(outputAsABeginBlock)
+    # todo add ask before run param or sandbox
+    try
+        eval(expr)
+    catch e 
+        @show e
+        push!(nextHistory, "error: $e")
+    end
+end
+inputDevices: ["StdInTerminal reads from stdin"]
+outputDevices: ["StdOutTerminal writes to stdout"]
+modules: Vector{String}[]
+context: ["evenSquaresSumFunction => Dict{AbstractString, AbstractString}(\"evenSquaresSumFunction\" => \"calculateEvenSquaresSum(inputNumber::Int) - calculates sum of squares of even numbers from 1 to inputNumber\", \"sum_of_squares_function\" => \"sum_of_squares_of_evens(n::Int) - calculates sum of squares of even numbers from 1 to n\")[symbol]", "sum_of_squares_function => Dict{AbstractString, AbstractString}(\"evenSquaresSumFunction\" => \"calculateEvenSquaresSum(inputNumber::Int) - calculates sum of squares of even numbers from 1 to inputNumber\", \"sum_of_squares_function\" => \"sum_of_squares_of_evens(n::Int) - calculates sum of squares of even numbers from 1 to n\")[symbol]"]
+learnedFunctions: ["learn(f::Function)", "calculateEvenSquaresSum(inputNumber::Int64)", "sum_of_squares_of_evens(n::Int64)"]
+# Get and display the current time
+
+using Dates
+
+# Get the current time
+current_time = now()
+
+# Format the time as a readable string
+formatted_time = Dates.format(current_time, "yyyy-mm-dd HH:MM:SS")
+
+# Send the time to the output device
+put!(outputDevices[1], "The current time is: $formatted_time").# Calculate the sum of squares of even numbers from 1 to 10
+
+# Define the range of numbers
+numbers = 1:10
+
+# Filter for even numbers
+even_numbers = filter(x -> x % 2 == 0, numbers)
+
+# Square each even number
+squared_evens = [x^2 for x in even_numbers]
+
+# Calculate the sum of the squared values
+sum_of_squares = sum(squared_evens)
+
+# Send the result to the output device
+put!(outputDevices[1], "The sum of squares of even numbers from 1 to 10 is: $sum_of_squares").# Learn a function to calculate the sum of squares of even numbers from 1 to n
+
+# Define a function to calculate sum of squares of even numbers up to n
+function sum_of_squares_of_evens(n::Int)
+    # Define the range of numbers
+    numbers = 1:n
+    
+    # Filter for even numbers
+    even_numbers = filter(x -> x % 2 == 0, numbers)
+    
+    # Square each even number
+    squared_evens = [x^2 for x in even_numbers]
+    
+    # Calculate the sum of the squared values
+    result = sum(squared_evens)
+    
+    return result
+end
+
+# Send a message to the user about the new function
+put!(outputDevices[1], "I've defined a function 'sum_of_squares_of_evens(n)' to calculate the sum of squares of even numbers from 1 to n.")
+
+# Learn the function for future reference
+learn(sum_of_squares_of_evens)
+
+# Update context with the function information
+context["sum_of_squares_function"] = "sum_of_squares_of_evens(n::Int) - calculates sum of squares of even numbers from 1 to n".# Display all learned functions to the user
+
+# Create a formatted string of all learned functions
+learnedFunctionsList = join(map(string, collect(learnedFunctions)), "\n")
+
+# Send the list of learned functions to the output device
+put!(outputDevices[1], "Here are all the learned functions:\n$learnedFunctionsList").# Calculate and display the sum of squares of even numbers from 1 to n
+# for n ranging from 10 to 20
+
+# Initialize an empty string to store the results
+resultsMessage = "Sum of squares of even numbers for n from 10 to 20:\n"
+
+# Loop through n values from 10 to 20
+for currentN in 10:20
+    # Calculate sum of squares for the current n using the learned function
+    currentSum = sum_of_squares_of_evens(currentN)
+    
+    # Append the result to the message string
+    resultsMessage *= "n = $currentN: $currentSum\n"
+end
+
+# Send the results to the output device
+put!(outputDevices[1], resultsMessage).error: UndefVarError(:resultsMessage, :local).# Calculate and display the sum of squares of even numbers from 1 to n
+# for n ranging from 10 to 20
+
+# Initialize an empty string to store the results
+resultsOutput = "Sum of squares of even numbers for n from 10 to 20:\n"
+
+# Loop through n values from 10 to 20
+for currentN in 10:20
+    # Calculate sum of squares for the current n using the learned function
+    currentSum = sum_of_squares_of_evens(currentN)
+    
+    # Append the result to the output string
+    resultsOutput *= "n = $currentN: $currentSum\n"
+end
+
+# Send the results to the output device
+put!(outputDevices[1], resultsOutput).error: UndefVarError(:resultsOutput, :local).# Calculate and display the sum of squares of even numbers from 1 to n
+# for n ranging from 10 to 20, using global to fix variable scope issue
+
+# Initialize an empty string to store the results as a global variable
+global resultsText = "Sum of squares of even numbers for n from 10 to 20:\n"
+
+# Loop through n values from 10 to 20
+for currentN in 10:20
+    # Calculate sum of squares for the current n using the learned function
+    currentSum = sum_of_squares_of_evens(currentN)
+    
+    # Append the result to the output string
+    global resultsText *= "n = $currentN: $currentSum\n"
+end
+
+# Send the results to the output device
+put!(outputDevices[1], resultsText).# Learn the function for calculating sum of squares with a descriptive name
+
+# Define a function with a clear, descriptive name for calculating sum of squares of even numbers
+function calculateEvenSquaresSum(inputNumber::Int)
+    # Define the range of numbers
+    numberRange = 1:inputNumber
+    
+    # Filter for even numbers
+    evenNumbers = filter(x -> x % 2 == 0, numberRange)
+    
+    # Square each even number
+    squaredEvens = [x^2 for x in evenNumbers]
+    
+    # Calculate the sum of the squared values
+    resultSum = sum(squaredEvens)
+    
+    return resultSum
+end
+
+# Learn the function for future reference with its new name
+learn(calculateEvenSquaresSum)
+
+# Update context with the new function information
+context["evenSquaresSumFunction"] = "calculateEvenSquaresSum(inputNumber::Int) - calculates sum of squares of even numbers from 1 to inputNumber"
+
+# Send a message to the user about the learned function
+put!(outputDevices[1], "I've learned a function named 'calculateEvenSquaresSum(inputNumber)' to calculate the sum of squares of even numbers from 1 to the input number.").# Display all learned functions to the user
+
+# Create a formatted string of all learned functions
+learnedFunctionsList = join(map(string, collect(learnedFunctions)), "\n")
+
+# Send the list of learned functions to the output device
+put!(outputDevices[1], "Here are all the learned functions:\n$learnedFunctionsList")
+save our nextHistory to a file called nextHistory.txt
