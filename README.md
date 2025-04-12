@@ -20,6 +20,11 @@ ML learns from the OS API documentation (written in human language) how to creat
 Eventually, the OS has enough complex code defined and the ML is complex enough to let the user created on-the-spot-made-up apps for the user.
 (Magic)
 
+# @true mode <=> provable open source (todo)
+information and manipulation thereof is provably open source.
+meaning no one can hide intent. this mode has higher cost to guarantee correctness.
+libraries should display @true information accordingly.
+
 # Example
 "device, i would like to play a game where an object flies that this and that and that else happens and it should be this" ... <screen shows game>
 
