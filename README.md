@@ -4,6 +4,7 @@ first working version
 `julia aos.jl`
 have fun
 (replace xAIAPIKey)
+(if a black-only (no-red) error is shown, just try again)
 
 # AbstractOS-infoOS-juliaOS-MagicOS-HumanOS-EngineerOS
 next gen OS: speak to your OS and it will do ... anything
