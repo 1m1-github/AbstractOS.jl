@@ -43,21 +43,18 @@ function call_xai_api(api_key::String, systemPrompt::String, userPrompt::String;
 end
 
 # Example usage
-function next(inputs)
+function next(state, nextHistory, deviceOutput)
     # Replace with your actual xAI API key
-    api_key = "xai-VGMPUem10kJW5f2wg0kGRKAsRzR4FKEVkWFrgN9ZuXm1ZDA9MkNlQOZQgfTCabkZA5JkZgE6y3wguoxC"
-    
-    # Define your prompt
-    # prompt = "Explain the significance of Julia in scientific computing."
+    xAIAPIKey = ""
     
     # Call the API
-    systemPrompt = "your purpose: $SYSTEM_PROMPT"
-    state = "state: $(inputs[1])"
-    nextHistory = "nextHistory: $(inputs[2])"
-    # deviceOutput = "deviceOutput: $(inputs[3])"
-    deviceOutput = inputs[3]
-    systemPrompt = join([systemPrompt, state, nextHistory], '.')
-    call_xai_api(api_key, systemPrompt, deviceOutput, max_tokens=1000)
+    systemPrompt = "yourPurpose: $SYSTEM_PROMPT"
+    state = "state: $state"
+    nextHistory = "yourPastResponses: $nextHistory"
+    currentPrompt = "currentPrompt: $deviceOutput"
+    systemPrompt *= "\n$state"
+    deviceOutput = "$nextHistory\n$currentPrompt"
+    call_xai_api(xAIAPIKey, systemPrompt, deviceOutput, max_tokens=1000)
     
     # Print the response
     # if response !== nothing
@@ -66,6 +63,3 @@ function next(inputs)
     #     println("Failed to get a response from the API.")
     # end
 end
-
-# Run the example
-# main()

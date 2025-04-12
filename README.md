@@ -1,4 +1,9 @@
-this project will be developed as part of the larger project: https://github.com/1m1-github/1m1
+# Update
+
+first working version
+`julia aos.jl`
+have fun
+(replace xAIAPIKey)
 
 # AbstractOS-infoOS-juliaOS-MagicOS-HumanOS-EngineerOS
 next gen OS: speak to your OS and it will do ... anything
@@ -151,3 +156,6 @@ https://youtu.be/7Dc3Y8sJbaE
 
 # text to regexp // needed?
 https://github.com/1m1-github/Text2juliaRegExp
+
+# Meta
+this project will be developed as part of the larger project: https://github.com/1m1-github/1m1
