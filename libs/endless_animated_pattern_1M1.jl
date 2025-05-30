@@ -1,6 +1,8 @@
 using Cairo
 
 @api function endless_animated_pattern(line_width::Float64 = 2.0, sleep_duration::Float64 = 0.02)
+    @assert 0 < sleep_duration
+    
     # Initialize Cairo surface
     surface = CairoARGBSurface(MiniFB_OutputDevice_WIDTH, MiniFB_OutputDevice_HEIGHT)
     ctx = CairoContext(surface)
@@ -20,9 +22,6 @@ using Cairo
     
     # Endless animation loop
     while true
-        global stop ; stop[] && return
-        yield()
-        
         step += 1
         
         # Clear background with slight transparency for trail effect

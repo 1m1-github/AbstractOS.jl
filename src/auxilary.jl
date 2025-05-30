@@ -89,8 +89,8 @@ function describe(code_name::Symbol, code::String)
     join(result, '\n')
 end
 
-function clean(t::Dict{Symbol, Tuple{Base.Threads.Atomic{Bool}, Task}})
-    name_and_tasks = map(s -> (s, t[s][2]), collect(keys(t)))
+function clean(t::Dict{Symbol, Task})
+    name_and_tasks = map(s -> (s, t[s]), collect(keys(t)))
     done_name_and_tasks = filter(name_and_task -> istaskdone(name_and_task[2]), name_and_tasks)
     map(name_and_task -> delete!(tasks, name_and_task[1]), done_name_and_tasks)
 end

@@ -19,7 +19,7 @@ inputs = Dict{Symbol, InputDevice}()
 outputs = Dict{Symbol, OutputDevice}()
 memory = Dict{Symbol, Any}()
 knowledge = Dict{Symbol, String}()
-tasks = Dict{Symbol, Tuple{Base.Threads.Atomic{Bool}, Task}}()
+tasks = Dict{Symbol, Task}()
 signals = Dict{Symbol, Bool}()
 errors = Exception[]
 
@@ -68,10 +68,10 @@ function run(device_output)
 end
 
 function run_task(julia_code::String)
-    task_name, stop, task = run_code_inside_task(julia_code)
-    isnothing(task_name) && isnothing(stop) && isnothing(task) && return 
+    task_name, task = run_code_inside_task(julia_code)
+    isnothing(task_name) && isnothing(task) && return 
     isnothing(task_name) && ( task_name = :task )
-    tasks[task_name] = (stop, task)
+    tasks[task_name] = task
     Threads.@spawn wait_and_monitor_task_for_error(task)
 end
 
@@ -80,14 +80,8 @@ function run_code_inside_task(julia_code::String)
         imports, body = separate(Meta.parse(julia_code))
         safe && !confirm() && return  # guaranteed to be settable by the user (via the REPL)
         eval(imports)
-        stop = Base.Threads.Atomic{Bool}(false)
-        expr = quote
-            let stop = $stop
-                $body
-            end
-        end
-        task = Threads.@spawn eval(expr)
-        return taskname(body), stop, task
+        task = Threads.@spawn eval(body)
+        return taskname(body), task
     catch e
         @show "run_code_inside_task error", e # DEBUG
         push!(errors, e)
