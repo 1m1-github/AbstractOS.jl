@@ -4,7 +4,6 @@ const AGENCY = 2
 
 ## core - required at the top
 
-
 include("src/core.jl")
 
 ## intelligence - exactly 1 should be used
@@ -25,6 +24,8 @@ learn(:DrawWithCairo, read("libs/DrawWithCairo_1M1.jl", String))
 learn(:DisplaySimpleText_1M1, read("libs/DisplaySimpleText_1M1.jl", String))
 learn(:endless_animated_pattern, read("libs/endless_animated_pattern_1M1.jl", String))
 learn(:ClearMemory, read("libs/ClearMemory_1M1.jl", String))
+learn(:animated_file_visualization, read("libs/animated_file_visualization_1M1.jl", String))
+learn(:ShowTimeInCorner, read("libs/ShowTimeInCorner_1M1.jl", String))
 
 ## REPL - required at the end
 

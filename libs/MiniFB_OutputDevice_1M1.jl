@@ -1,5 +1,5 @@
-@api const MiniFB_OutputDevice_WIDTH = 800
-@api const MiniFB_OutputDevice_HEIGHT = 600
+@api const MiniFB_OutputDevice_WIDTH = 2560
+@api const MiniFB_OutputDevice_HEIGHT = 1600
 @api const MiniFB_OutputDevice = """
 this knowledge allows you to show a rectangle of pixels on a screen.
 Use `put!(outputs[:MiniFB], buffer::Vector{UInt32})` to draw pixels to the MiniFB screen of size width=$MiniFB_OutputDevice_WIDTH,height=$MiniFB_OutputDevice_HEIGHT.
