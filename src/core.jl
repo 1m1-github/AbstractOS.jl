@@ -98,7 +98,7 @@ end
 function describe()::String
     join([
             "describe() BEGIN\n",
-            "OS source code BEGIN:\n" * read(@__FILE__, String) * "==\nOS source code END",
+            "OS source code BEGIN:\n" * read(CORE_PATH, String) * "==\nOS source code END",
             "inputs BEGIN:\n" * join(map(symbol -> "describe(inputs[:$symbol]) = \"" * describe(inputs[symbol]) * "\"", collect(keys(inputs))), '\n') * "\ninputs END",
             "outputs BEGIN:\n" * join(map(symbol -> "describe(outputs[:$symbol]) = \"" * describe(outputs[symbol]) * "\"", collect(keys(outputs))), '\n') * "\noutputs END",
             "memory BEGIN:\n" * join(map(symbol -> "$symbol => $(memory[symbol])", collect(keys(memory))), '\n') * "\nmemory END",
@@ -133,7 +133,10 @@ describe(a) = nothing
 
 function wait_and_monitor_task_for_error(task::Task)
     try wait(task) catch e 
-        @show "wait_and_monitor_task_for_error, error, $e, $(e.task.exception)"
+        @show "wait_and_monitor_task_for_error, error, $e, $(e.task.exception), "
+        bt = catch_backtrace()
+        limited_bt = bt[1:min(length(bt), 100)] # todo magic #
+        Base.show_backtrace(stdout, limited_bt)
         push!(errors, e.task.exception)
     end
 end

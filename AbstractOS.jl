@@ -4,7 +4,8 @@ const AGENCY = 2
 
 ## core - required at the top
 
-include("src/core.jl")
+const CORE_PATH = "/Users/1m1/Documents/AbstractOS/src/core.jl"
+include(CORE_PATH)
 
 ## intelligence - exactly 1 should be used
 
