@@ -61,6 +61,7 @@ end
 function run(device_output; files=[])
     clean(tasks) # rm 'done' tasks
     input = "$(describe())\n$device_output"
+    memory[:input] = input
     write("log/input.jl", input) # DEBUG
     global errors ; errors = Exception[] # `inputs` contains errors
     signals[:next_running] = true
