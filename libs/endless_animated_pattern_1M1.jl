@@ -1,3 +1,5 @@
+import Pkg
+Pkg.add(["Cairo"])
 using Cairo
 
 @api function endless_animated_pattern(line_width::Float64 = 2.0, sleep_duration::Float64 = 0.02)

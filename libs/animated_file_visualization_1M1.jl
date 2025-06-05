@@ -1,3 +1,5 @@
+import Pkg
+Pkg.add(["Cairo", "Colors"])
 using Cairo, Colors
 
 function create_file_visualization()
