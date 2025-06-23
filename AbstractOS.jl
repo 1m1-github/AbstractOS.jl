@@ -21,8 +21,9 @@ learn(:Browser_OutputDevice, read("libs/Browser_OutputDevice_1M1.jl", String))
 
 ## knowledge
 
-# learn(:Advice, read("libs/Advice_1M1.jl", String))
+learn(:Advice, read("libs/Advice_1M1.jl", String))
 learn(:EngineeringMethodology, read("libs/EngineeringMethodology_1M1.jl", String))
+learn(:RonWayneOpinion, read("libs/RonWayneOpinion_1M1.jl", String))
 
 # learn(:DrawWithCairo, read("libs/DrawWithCairo_1M1.jl", String))
 # learn(:DisplaySimpleText_1M1, read("libs/DisplaySimpleText_1M1.jl", String))
