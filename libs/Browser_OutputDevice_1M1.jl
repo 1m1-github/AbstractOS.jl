@@ -47,7 +47,6 @@ struct Command
 end
 using HTTP, JSON3
 function handler(req)
-    @show "handler"
     # req.method == "GET" && return HTTP.Response(200, read("libs/Browser_OutputDevice_1M1.html", String))
     html_file = read("libs/BrowserHeyGen_OutputDevice_1M1.html", String)
     html_file = replace(html_file, """ENV["HEYGEN_API_KEY"]""" => ENV["HEYGEN_API_KEY"])

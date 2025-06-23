@@ -121,6 +121,7 @@
                 try {
                     const accessToken = await createAccessToken(apiKey);
                     sessionInfo = await createSession(accessToken, avatarId, voiceId);
+                    setInterval(keepAlive, 60000);
                     await startStreaming(accessToken, sessionInfo.data.session_id);
                     livekitRoom = new LivekitClient.Room({
                         adaptiveStream: true,
@@ -294,6 +295,31 @@
                 } catch (error) {
                     console.log(`Error sending task: ${error.message}`);
                     console.log('Error sending task', 'connected');
+                }
+            }
+
+            async function keepAlive() {
+                if (!sessionInfo) return;
+
+                try {
+                    const response = await fetch('https://api.heygen.com/v1/streaming.keep_alive', {
+                        method: 'POST',
+                        headers: {
+                            'x-api-key': apiKey,
+                            'accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            session_id: sessionInfo.data.session_id
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Failed to keep alive: ${response.status} ${response.statusText}`);
+                    }
+
+                } catch (error) {
+                    console.log(`Error keep alive: ${error.message}`);
                 }
             }
         </script>
