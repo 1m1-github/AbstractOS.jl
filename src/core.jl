@@ -61,14 +61,22 @@ function listen(device::InputDevice)
 end
 
 function run(device_output; files=[])
+    @show "r1"
     clean(tasks) # rm 'done' tasks
+    @show "r2"
     input = "$(describe())\n$device_output"
+    @show "r3"
     write("log/input.jl", input) # DEBUG
+    @show "r4"
     global errors ; errors = Exception[] # `inputs` contains errors
+    @show "r5"
     signals[:next_running] = true
+    @show "r6"
     memory[:output] = julia_code = next(input, files=files) # `next` is implemented by the attached intelligence
+    @show "r7"
     # memory[:output] = julia_code = read("log/output.jl", String) # DEBUG
     signals[:next_running] = false
+    @show "r8"
     println(julia_code)
     write("log/output.jl", julia_code) # DEBUG
     run_task("begin $julia_code end")
