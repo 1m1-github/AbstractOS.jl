@@ -58,7 +58,9 @@
                     newScript.textContent = script.textContent;
                     document.head.appendChild(newScript);
                     document.head.removeChild(newScript);
-                }            
+                }
+                
+                speechSynthesis.speak(new SpeechSynthesisUtterance(data.audio_message));
             };
             ws.onclose = function (event) {
                 console.log('WebSocket closed');

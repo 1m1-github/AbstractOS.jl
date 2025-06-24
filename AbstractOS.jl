@@ -17,6 +17,7 @@ learn(:Claude_next, read("libs/Claude_next_1M1.jl", String))
 
 learn(:ChannelString_InputDevice, read("libs/ChannelString_InputDevice_1M1.jl", String))
 # learn(:MiniFB_OutputDevice, read("libs/MiniFB_OutputDevice_1M1.jl", String))
+# learn(:Browser_OutputDevice, read("libs/BrowserAudio_OutputDevice_1M1.jl", String))
 learn(:Browser_OutputDevice, read("libs/Browser_OutputDevice_1M1.jl", String))
 
 ## knowledge
