@@ -61,6 +61,7 @@ function listen(device::InputDevice)
 end
 
 function run(device_output; files=[])
+    @show "run"
     clean(tasks) # rm 'done' tasks
     input = "$(describe())\n$device_output"
     write("log/input.jl", input) # DEBUG
@@ -92,7 +93,7 @@ function run_code_inside_task(julia_code::String)
     catch e
         @show "run_code_inside_task error", e # DEBUG
         push!(errors, e)
-        return nothing, nothing
+        run("try again, there was an error.")
     end
 end
 
@@ -148,6 +149,7 @@ function wait_and_monitor_task_for_error(task::Task)
         limited_bt = bt[1:min(length(bt), 1000)] # todo magic #
         Base.show_backtrace(stdout, limited_bt)
         push!(errors, e.task.exception)
+        run("try again, there was an error, $e, $(e.task.exception)")
     end
 end
 

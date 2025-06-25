@@ -1,6 +1,6 @@
-@api const Browser_OutputDevice = """
-                                  connects to a browser. the browser gives you a channel with the user.
-                                  `put!(device::BrowserOutputDevice, div_content::String)` will overwrite the `innerHTML` of the `div` with `id` "content". nothing besides this content div is visible to the user.
+@api const BrowserAudio_OutputDevice = """
+                                  connects to a browser. the browser gives you a graphic and an audio communication channel with the user.
+                                  `put!(device::BrowserAudioOutputDevice, div_content::String, audio_message::String)` will overwrite the `innerHTML` of the `div` with `id` "content" and will have the browser speak `audio_message`. nothing besides this content div is visible to the user.
                                   the html/css/js that you `put!` to the browser can also run code back in the system by sending Julia code via the websocket.
                                   anything sent to the websocket that begins with `julia>` will be executed (`eval`), whilst everything else is sent to `run`. this allows e.g. html buttons to run code back on the system/server/OS.
                                   and the OS (Julia) can run code in the browser simply by adding `script` elements in the `div_content`, e.g. to update data for the browser.
@@ -10,27 +10,28 @@
                                   """
 
 using HTTP.WebSockets
-@api struct BrowserOutputDevice <: OutputDevice
+@api struct BrowserAudioOutputDevice <: OutputDevice
     ws::WebSocket
 end
 
 using JSON3
 import Base.put!
-@api function put!(device::BrowserOutputDevice, div_content::String)
+@api function put!(device::BrowserAudioOutputDevice, div_content::String, audio_message::String)
     msg = Dict(
-        :div_content => div_content
+        :div_content => div_content,
+        :audio_message => audio_message,
     )
     !WebSockets.isclosed(device.ws) && send(device.ws, JSON3.write(msg))
 end
 import Base.take!
 
-describe(::BrowserOutputDevice) = Browser_OutputDevice
+describe(::BrowserAudioOutputDevice) = BrowserAudio_OutputDevice
 inputs[:Browser] = ChannelStringInputDevice()
 
 function start_websocket()
-    # WebSockets.listen("127.0.0.1", 8081) do ws
-    WebSockets.listen("0.0.0.0", 8081) do ws
-        outputs[:Browser] = BrowserOutputDevice(ws)
+    WebSockets.listen("127.0.0.1", 8081) do ws
+    # WebSockets.listen("0.0.0.0", 8081) do ws
+        outputs[:Browser] = BrowserAudioOutputDevice(ws)
         for command in ws
             if startswith(lowercase(command), "julia>")
                 julia_command = command[length("julia>")+1:end]
@@ -51,5 +52,5 @@ function handler(req)
     req.method == "GET" && return HTTP.Response(200, html_file)
     HTTP.Response(404, "not found")
 end
-# @async HTTP.serve(handler, "127.0.0.1", 8080)
-@async HTTP.serve(handler, "0.0.0.0", 8080)
+@async HTTP.serve(handler, "127.0.0.1", 8080)
+# @async HTTP.serve(handler, "0.0.0.0", 8080)

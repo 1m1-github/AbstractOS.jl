@@ -40,8 +40,8 @@
         <input type="text" id="hiddenInput" autocomplete="off" spellcheck="false">
         <div id="subtitles" class="listening"></div>
         <script>
-            let ws = new WebSocket('ws://104.196.149.166:8081');
-            // let ws = new WebSocket('ws://127.0.0.1:8081');
+            // let ws = new WebSocket('ws://104.196.149.166:8081');
+            let ws = new WebSocket('ws://127.0.0.1:8081');
             ws.onopen = function (event) {
                 console.log('WebSocket connected');
             };

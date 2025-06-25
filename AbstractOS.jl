@@ -1,7 +1,3 @@
-# determines how often the intelligence can run itself without needing outside agency
-# 1 ≤ AGENCY allows the intelligence to react to the first error without needing to be asked
-const AGENCY = 100
-
 ## core - required at the top
 
 const CORE_PATH = "src/core.jl"
@@ -24,7 +20,7 @@ learn(:Browser_OutputDevice, read("libs/Browser_OutputDevice_1M1.jl", String))
 
 learn(:Advice, read("libs/Advice_1M1.jl", String))
 learn(:EngineeringMethodology, read("libs/EngineeringMethodology_1M1.jl", String))
-learn(:RonWayneOpinion, read("libs/RonWayneOpinion_1M1.jl", String))
+# learn(:RonWayneOpinion, read("libs/RonWayneOpinion_1M1.jl", String))
 
 # learn(:DrawWithCairo, read("libs/DrawWithCairo_1M1.jl", String))
 # learn(:DisplaySimpleText_1M1, read("libs/DisplaySimpleText_1M1.jl", String))
