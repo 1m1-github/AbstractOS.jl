@@ -1,3 +1,7 @@
+import Pkg
+Pkg.add(["Cairo"])
+using Cairo
+
 @api function display_text_on_minifb(text::String, x::Float64=100.0, y::Float64=300.0, font_size::Float64=24.0)
     surface = CairoARGBSurface(MiniFB_OutputDevice_WIDTH, MiniFB_OutputDevice_HEIGHT)
     ctx = CairoContext(surface)

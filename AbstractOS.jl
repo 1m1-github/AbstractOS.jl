@@ -34,8 +34,7 @@ learn(:EngineeringMethodology, read("libs/EngineeringMethodology_1M1.jl", String
 # learn(:Heygen_API, read("libs/Heygen_API_1M1.jl", String))
 # learn(:KGU, read("libs/KGU_1M1.jl", String))
 
-## listen required at the end
+## REPL
+# learn(:REPL, read("libs/REPL_OutputDevice_1M1.jl", String))
 
 [Threads.@spawn listen(inputs[device]) for device in keys(inputs)]
-
-# learn(:REPL, read("libs/REPL_OutputDevice_1M1.jl", String))

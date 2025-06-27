@@ -28,31 +28,6 @@ import Base.take!
 describe(::BrowserAudioOutputDevice) = BrowserAudio_OutputDevice
 inputs[:Browser] = ChannelStringInputDevice()
 
-function start_websocket()
-    WebSockets.listen("127.0.0.1", 8081) do ws
-    # WebSockets.listen("0.0.0.0", 8081) do ws
-        outputs[:Browser] = BrowserAudioOutputDevice(ws)
-        for command in ws
-            if startswith(lowercase(command), "julia>")
-                julia_command = command[length("julia>")+1:end]
-                return eval(julia_command)
-            end
-            put!(inputs[:Browser].command_channel, command)
-        end
-    end
-end
-@async start_websocket()
-
-struct Command
-    value::String
-end
-using HTTP, JSON3
-function handler(req)
-    # html_file = read("libs/BrowserAudio_OutputDevice_1M1.html", String)
-    html_file = read("libs/BrowserHeyGen_OutputDevice_1M1.html", String)
-    html_file = replace(html_file, """ENV["HEYGEN_API_KEY"]""" => ENV["HEYGEN_API_KEY"])
-    req.method == "GET" && return HTTP.Response(200, html_file)
-    HTTP.Response(404, "not found")
-end
-@async HTTP.serve(handler, "127.0.0.1", 8080)
-# @async HTTP.serve(handler, "0.0.0.0", 8080)
+include("libs/BrowserWebSocketAndHttpServer_1M1.jl")
+@async start_websocket("127.0.0.1", 8081, BrowserAudioOutputDevice)
+@async HTTP.serve(req -> handler(req, "libs/BrowserHeyGen_OutputDevice_1M1.html"), "127.0.0.1", 8080)

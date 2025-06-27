@@ -1,0 +1,59 @@
+<div id="input">
+    <style>
+        #subtitles {
+            position: fixed;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            color: black;
+            font-size: 24px;
+            text-align: center;
+            padding: 15px 30px;
+            border-radius: 10px;
+            max-width: 80%;
+            min-height: 60px;
+            border: 1px solid #ccc;
+            outline: none;
+            width: 90%;
+        }
+    </style>
+    <input type="text" id="subtitles" autocomplete="off" spellcheck="false">
+    <script>
+        // let ws = new WebSocket('ws://104.196.149.166:8081');
+        let ws = new WebSocket('ws://127.0.0.1:8081');
+        ws.onopen = function (event) {
+            console.log('WebSocket connected');
+        };
+        ws.onmessage = function (event) {
+            console.log('WebSocket onmessage', event.data);
+
+            const data = JSON.parse(event.data);
+            let contentDiv = document.getElementById('content');
+            contentDiv.innerHTML = data.div_content;
+
+            const scripts = contentDiv.getElementsByTagName('script');
+            for (const script of scripts) {
+                const newScript = document.createElement('script');
+                newScript.textContent = script.textContent;
+                document.head.appendChild(newScript);
+                document.head.removeChild(newScript);
+            }
+        };
+        ws.onclose = function (event) {
+            console.log('WebSocket closed');
+        };
+        ws.onerror = function (error) {
+            console.error('WebSocket error:', error);
+        };
+
+        const subtitles = document.getElementById('subtitles');
+        subtitles.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                ws.send(subtitles.value);
+                subtitles.value = '';
+            }
+        });
+    </script>
+</div>
