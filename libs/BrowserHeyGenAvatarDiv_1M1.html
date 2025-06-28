@@ -1,0 +1,322 @@
+<div id="avatar">
+    <style>
+        .video-container {
+            position: fixed;
+            right: 40px;
+            bottom: 40px;
+            z-index: 9999;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0px 8px 24px 0px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+            margin-bottom: 0;
+        }
+
+        #avatarVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #fff;
+            border-radius: 0;
+            border: none;
+        }
+    </style>
+
+    <div class="video-container">
+        <video id="avatarVideo" autoplay playsinline>
+            Your browser does not support the video tag.
+        </video>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+    <script>
+        const apiKey = 'ENV["HEYGEN_API_KEY"]';
+        const avatarId = 'ae024d98fd1e479ba3dfe80e69c3f946'; // Ron
+        const voiceId = 'ef4c1eb1cafe4d47b96b195f2d5fca2f'; // Ron
+        // const avatarId = '547c4c53644a4a6bb3700a11c877b8f0'; // Joann
+        // const voiceId = '06e5e9cd1468464c9eb6a72b130c284d'; // Joann
+
+        let livekitRoom = null;
+        let wsConnection = null;
+        let sessionInfo = null;
+        let mediaStream = new MediaStream();
+
+        const videoElement = document.getElementById('avatarVideo');
+
+        async function createAccessToken(apiKey) {
+            const response = await fetch('https://api.heygen.com/v1/streaming.create_token', {
+                method: 'POST',
+                headers: {
+                    'x-api-key': apiKey,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to create token: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            return data.data.token;
+        }
+
+        async function createSession(accessToken, avatarId, voiceId) {
+            const response = await fetch('https://api.heygen.com/v1/streaming.new', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    quality: 'medium',
+                    avatar_id: avatarId,
+                    voice: {
+                        voice_id: voiceId,
+                        rate: 1.0,
+                        emotion: 'FRIENDLY'
+                    },
+                    version: 'v2',
+                    video_encoding: 'H264'
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to create session: ${response.status} ${response.statusText}`);
+            }
+
+            return await response.json();
+        }
+
+        async function startStreaming(accessToken, sessionId) {
+            const response = await fetch('https://api.heygen.com/v1/streaming.start', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    session_id: sessionId
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to start streaming: ${response.status} ${response.statusText}`);
+            }
+
+            return await response.json();
+        }
+
+        async function startSession() {
+            if (!apiKey) {
+                alert('Please enter your HeyGen API key');
+                return;
+            }
+
+            try {
+                const accessToken = await createAccessToken(apiKey);
+                sessionInfo = await createSession(accessToken, avatarId, voiceId);
+                setInterval(keepAlive, 60000);
+                await startStreaming(accessToken, sessionInfo.data.session_id);
+                livekitRoom = new LivekitClient.Room({
+                    adaptiveStream: true,
+                    dynacast: true,
+                    videoCaptureDefaults: {
+                        resolution: LivekitClient.VideoPresets.h720.resolution
+                    }
+                });
+
+                livekitRoom.on(LivekitClient.RoomEvent.Connected, () => {
+                    console.log('livekitRoom.on Connected');
+                });
+
+                livekitRoom.on(LivekitClient.RoomEvent.Disconnected, () => {
+                    console.log('livekitRoom.on Disconnected');
+                });
+
+                livekitRoom.on(LivekitClient.RoomEvent.TrackSubscribed, (track) => {
+                    console.log('livekitRoom.on TrackSubscribed');
+                    if (track.kind === "video" || track.kind === "audio") {
+                        mediaStream.addTrack(track.mediaStreamTrack);
+                        if (
+                            mediaStream.getVideoTracks().length > 0 &&
+                            mediaStream.getAudioTracks().length > 0
+                        ) {
+                            videoElement.srcObject = mediaStream;
+                        }
+                    }
+                });
+
+                livekitRoom.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+                    console.log('livekitRoom.on TrackUnsubscribed');
+                });
+
+                await livekitRoom.connect(sessionInfo.data.url, sessionInfo.data.access_token);
+                setupWebSocket();
+            } catch (error) {
+                console.log(`Error starting session: ${error.message}`);
+                console.log(`Error: ${error.message}`, 'disconnected');
+            }
+        }
+
+        function setupWebSocket() {
+            try {
+                if (sessionInfo && sessionInfo.data.realtime_endpoint) {
+                    wsConnection = new WebSocket(sessionInfo.data.realtime_endpoint);
+
+                    wsConnection.onopen = () => {
+                        console.log('wsConnection.onopen');
+                        setInterval(() => {
+                            if (wsConnection.readyState === WebSocket.OPEN) {
+                                wsConnection.send(JSON.stringify({ type: 'ping' }));
+                            }
+                        }, 1000); // Send ping every 1 seconds
+                    };
+
+                    wsConnection.onmessage = (event) => {
+                        console.log('wsConnection.onmessage', event);
+
+                        const data = JSON.parse(event.data);
+
+                        if (data.type === 'avatar_start_talking') {
+                        } else if (data.type === 'avatar_stop_talking') {
+                        }
+                    };
+
+                    wsConnection.onerror = (error) => {
+                        console.log('wsConnection.onerror', error);
+                    };
+
+                    wsConnection.onclose = () => {
+                        console.log('wsConnection.onclose');
+                    };
+                } else {
+                }
+            } catch (error) {
+                console.log(`WebSocket setup error: ${error.message} - continuing with REST API`);
+            }
+        }
+
+        async function stopSession() {
+            try {
+                if (wsConnection) {
+                    wsConnection.close();
+                    wsConnection = null;
+                }
+
+                if (livekitRoom) {
+                    await livekitRoom.disconnect();
+                    livekitRoom = null;
+                }
+
+                if (sessionInfo && sessionInfo.data.session_id) {
+                    const response = await fetch('https://api.heygen.com/v1/streaming.stop', {
+                        method: 'POST',
+                        headers: {
+                            'x-api-key': apiKey,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            session_id: sessionInfo.data.session_id
+                        })
+                    });
+
+                    if (response.ok) {
+                        console.log('Session stopped successfully');
+                    } else {
+                        console.log(`Warning: Failed to stop session via API: ${response.status}`);
+                    }
+                }
+
+                sessionInfo = null;
+
+            } catch (error) {
+                console.log(`Error stopping session: ${error.message}`);
+                console.log('Error stopping session', 'disconnected');
+            }
+        }
+
+        async function sendTask(text) {
+            if (!sessionInfo) await startSession();
+            const taskType = 'repeat';
+            if (!text || !sessionInfo) {
+                return;
+            }
+            await interruptTask();
+
+            try {
+                const response = await fetch('https://api.heygen.com/v1/streaming.task', {
+                    method: 'POST',
+                    headers: {
+                        'x-api-key': apiKey,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        session_id: sessionInfo.data.session_id,
+                        text: text,
+                        task_type: taskType
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to send task: ${response.status} ${response.statusText}`);
+                }
+
+            } catch (error) {
+                console.log(`Error sending task: ${error.message}`);
+                console.log('Error sending task', 'connected');
+            }
+        }
+
+        async function interruptTask() {
+            if (!sessionInfo) return;
+
+            try {
+                const response = await fetch('https://api.heygen.com/v1/streaming.interrupt', {
+                    method: 'POST',
+                    headers: {
+                        'x-api-key': apiKey,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        session_id: sessionInfo.data.session_id
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to interrupt task: ${response.status} ${response.statusText}`);
+                }
+
+            } catch (error) {
+                console.log(`Error sending task: ${error.message}`);
+                console.log('Error sending task', 'connected');
+            }
+        }
+
+        async function keepAlive() {
+            if (!sessionInfo) return;
+
+            try {
+                const response = await fetch('https://api.heygen.com/v1/streaming.keep_alive', {
+                    method: 'POST',
+                    headers: {
+                        'x-api-key': apiKey,
+                        'accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        session_id: sessionInfo.data.session_id
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to keep alive: ${response.status} ${response.statusText}`);
+                }
+
+            } catch (error) {
+                console.log(`Error keep alive: ${error.message}`);
+            }
+        }
+    </script>
+</div>

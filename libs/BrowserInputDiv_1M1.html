@@ -20,7 +20,6 @@
     </style>
     <input type="text" id="subtitles" autocomplete="off" spellcheck="false">
     <script>
-        // let ws = new WebSocket('ws://104.196.149.166:8081');
         let ws = new WebSocket('ws://127.0.0.1:8081');
         ws.onopen = function (event) {
             console.log('WebSocket connected');
@@ -39,6 +38,8 @@
                 document.head.appendChild(newScript);
                 document.head.removeChild(newScript);
             }
+
+            // code for audio
         };
         ws.onclose = function (event) {
             console.log('WebSocket closed');

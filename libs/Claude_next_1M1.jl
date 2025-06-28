@@ -1,3 +1,5 @@
+# set ENV["CLAUDE_API_KEY"]
+
 @api const Claude_next = """
 this knowledge connects to claude.ai
 """

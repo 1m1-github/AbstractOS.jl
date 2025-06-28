@@ -1,4 +1,4 @@
-@api const EngineeringMethodology = 
+@api const ReliableEngineering = 
 """
 the following is VERY import advice when given a command to code (computer engineer).
 always include the most minimal tests to cover the requirements of the command, using `@test`.

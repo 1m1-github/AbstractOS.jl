@@ -22,11 +22,14 @@ import Base.put!
     )
     !WebSockets.isclosed(device.ws) && send(device.ws, JSON3.write(msg))
 end
-import Base.take!
 
 describe(::BrowserOutputDevice) = Browser_OutputDevice
 inputs[:Browser] = ChannelStringInputDevice()
 
-include("libs/BrowserWebSocketAndHttpServer_1M1.jl")
+learn(:BrowserWebSocket, read("libs/BrowserWebSocket_1M1.jl", String))
 @async start_websocket("127.0.0.1", 8081, BrowserOutputDevice)
-@async HTTP.serve(req -> handler(req, "libs/Browser_OutputDevice_1M1.html"), "127.0.0.1", 8080)
+html = """<html><body><div id="content"></div>input</body></html>"""
+input_html = read("libs/BrowserInputDiv_1M1.html", String)
+input_html = replace(input_html, "// code for audio" => "")
+html = replace(html, "input" => input_html)
+@async HTTP.serve(req -> HTTP.Response(200, html), "127.0.0.1", 8080)

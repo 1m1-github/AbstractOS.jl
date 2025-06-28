@@ -1,14 +1,4 @@
-const YOUR_PURPOSE = """
-you are an intelligence operating a machine using this computer operating system. 
-upon command, manipulate the state as appropriate. your response is the output of `next`.
-provide an amazing experience to the user with this most powerful ever built OS. it is AbstractOS because it deals with any inputs and outputs, it is EngineerOS because you build and learn together with the user, it is HumanOS because the user can talk, gesture as with any other human, provided the correct input modules.
-ONLY return raw Julia code (without any types of quotes). return text that when run with `eval(Meta.parse(YourResponse))` will manipulate the system, that means not wrapped in a string or anything, not prepended with non-code, you communicate only via the `outputs`.
-when learning, after the import/using and such commands, encapsulate everything else into functions (some functions with @api) and do not run any of these functions, because `learn` `eval`s the code, we want to add this code to `knowledge`, not run this, which we probably just ran and want to learn becauseit worked and is working; `learn` `eval`s to have the functions loaded
-always consider your `knowledge`, reuse whenever possible instead of reinventing .
-always set `task_name`, this allows you to stop the task in the future.
-when there is an error, there is no fixing unless you rerun it fixed.
-to stop any `Task`, get the `Task` from the `tasks` `Dict` and run `schedule(tasks[:some_task_name], InterruptException(),error=true)`.
-"""
+const YOUR_PURPOSE = "you are an a computer operating system"
 
 abstract type IODevice end
 abstract type InputDevice <: IODevice end # e.g. microphone, keyboard, camera, touch, ...
@@ -24,7 +14,7 @@ outputs = Dict{Symbol, OutputDevice}()
 memory = Dict{Symbol, Any}()
 knowledge = Dict{Symbol, String}()
 tasks = Dict{Symbol, Task}()
-signals = Dict{Symbol, Bool}()
+signals = Dict{Symbol, Bool}(:stop_run => false)
 errors = Exception[]
 
 macro api(args...) 
@@ -61,14 +51,14 @@ function listen(device::InputDevice)
 end
 
 function run(device_output; files=[])
-    haskey(signals, :stop_run) && signals[:stop_run] && ( signals[:stop_run] = false ) && return
-    clean(tasks) # rm 'done' tasks
+    signals[:stop_run] && ( signals[:stop_run] = false ) && return
+    clean(tasks)
     input = "$(describe())\n$device_output"
     write("log/input.jl", input) # DEBUG
-    global errors ; errors = Exception[] # `inputs` contains errors
+    global errors ; errors = Exception[]
     signals[:next_running] = true
-    memory[:output] = julia_code = next(input, files=files) # `next` is implemented by the attached intelligence
-    # memory[:output] = julia_code = read("log/output.jl", String) # DEBUG
+    # memory[:output] = julia_code = next(input, files=files) # `next` is implemented by the attached intelligence
+    memory[:output] = julia_code = read("log/output.jl", String) # DEBUG
     signals[:next_running] = false
     println(julia_code)
     write("log/output.jl", julia_code) # DEBUG
@@ -76,7 +66,9 @@ function run(device_output; files=[])
 end
 
 function run_task(julia_code::String)
+    @show "run_task", julia_code
     task_name, task = run_code_inside_task(julia_code)
+    @show task_name, task
     isnothing(task_name) && isnothing(task) && return 
     isnothing(task_name) && throw("need to set `task_name`")
     tasks[task_name] = task
