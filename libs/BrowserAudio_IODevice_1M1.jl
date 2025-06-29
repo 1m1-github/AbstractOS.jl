@@ -1,11 +1,20 @@
+# set 
+# ENV["ABSTRACTOS_HTTP_IP"]
+# ENV["ABSTRACTOS_HTTP_PORT"]
+# ENV["ABSTRACTOS_WEBSOCKET_PORT"]
+
 learn(:BrowserAudio_OutputDevice, read("libs/BrowserAudio_OutputDevice_1M1.jl", String))
 describe(::BrowserAudioOutputDevice) = BrowserAudio_OutputDevice
 inputs[:Browser] = ChannelStringInputDevice()
 
 learn(:BrowserWebSocket, read("libs/BrowserWebSocket_1M1.jl", String))
-@async start_websocket("127.0.0.1", 8081, BrowserAudioOutputDevice)
-html = """<html><body><div id="content"></div>input</body></html>"""
-input_html = read("libs/BrowserInputDiv_1M1.html", String)
-input_html = replace(input_html, "// code for audio" => "speechSynthesis.speak(new SpeechSynthesisUtterance(data.audio_message));")
-html = replace(html, "input" => input_html)
-@async HTTP.serve(req -> HTTP.Response(200, html), "127.0.0.1", 8080)
+@async start_websocket(ENV["ABSTRACTOS_HTTP_IP"], ENV["ABSTRACTOS_WEBSOCKET_PORT"], BrowserAudioOutputDevice)
+function handle(req)
+    html = """<html><body><div id="content"></div>input</body></html>"""
+    input_html = read("libs/BrowserInputDiv_1M1.html", String)
+    input_html = replace(input_html, "// code for audio" => "speechSynthesis.speak(new SpeechSynthesisUtterance(data.audio_message));")
+    input_html = replace(input_html, """ws://\$(ENV["ABSTRACTOS_HTTP_IP"]):\$(ENV["ABSTRACTOS_WEBSOCKET_PORT"])""" => """ws://$(ENV["ABSTRACTOS_HTTP_IP"]):$(ENV["ABSTRACTOS_WEBSOCKET_PORT"])""")
+    html = replace(html, "input" => input_html)
+    HTTP.Response(200, html)
+end
+@async HTTP.serve(handle, ENV["ABSTRACTOS_HTTP_IP"], ENV["ABSTRACTOS_HTTP_PORT"])

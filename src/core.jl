@@ -23,15 +23,20 @@ macro api(args...)
 end # used to denote parts of `knowledge` that are presented to the `intelligence` as abilities that can be considered black-boxes
 
 function learn(code_name::Symbol, code::String)
+    @show "learn", code_name # DEBUG
     try
         clean_code = replace(code, "@api " => "")
         code_expr = Meta.parse("begin $clean_code end")
+        @show "learn, code_expr" # DEBUG
         code_name ∈ keys(knowledge) && return
+        @show "learn, code_name ∉ keys(knowledge)" # DEBUG
         code ∈ collect(values(knowledge)) && return
+        @show "learn, code ∉ collect(values(knowledge))" # DEBUG
         eval(code_expr)
+        @show "learn, eval" # DEBUG
         knowledge[code_name] = code
         write("libs/$(code_name)_1M1.jl", code)
-        @show "learned $code_name"
+        @show "learned $code_name"  # DEBUG
     catch e
         show(e)
         throw(e)
@@ -41,24 +46,29 @@ end
 # todo @true mode = provable open source, always runs with safe==true
 
 function listen(device::InputDevice)
+    @show "listen", device # DEBUG
     while true
         output = take!(device)
         memory[Symbol("$(typeof(device))/output")] = output
         isempty(output) && continue
-        @show output
+        @show output # DEBUG
         @lock lock run(output)
     end
 end
 
 function run(device_output; files=[])
+    @show "run" # DEBUG
     signals[:stop_run] && ( signals[:stop_run] = false ) && return
     clean(tasks)
+    @show "run cleaned tasks" # DEBUG
     input = "$(describe())\n$device_output"
+    @show "run input" # DEBUG
     write("log/input.jl", input) # DEBUG
     global errors ; errors = Exception[]
     signals[:next_running] = true
-    # memory[:output] = julia_code = next(input, files=files) # `next` is implemented by the attached intelligence
-    memory[:output] = julia_code = read("log/output.jl", String) # DEBUG
+    memory[:output] = julia_code = next(input, files=files) # `next` is implemented by the attached intelligence
+    # memory[:output] = julia_code = read("log/output.jl", String) # DEBUG
+    @show "run output" # DEBUG
     signals[:next_running] = false
     println(julia_code)
     write("log/output.jl", julia_code) # DEBUG
@@ -66,9 +76,9 @@ function run(device_output; files=[])
 end
 
 function run_task(julia_code::String)
-    @show "run_task", julia_code
+    @show "run_task", julia_code # DEBUG
     task_name, task = run_code_inside_task(julia_code)
-    @show task_name, task
+    @show task_name, task # DEBUG
     isnothing(task_name) && isnothing(task) && return 
     isnothing(task_name) && throw("need to set `task_name`")
     tasks[task_name] = task
@@ -76,11 +86,15 @@ function run_task(julia_code::String)
 end
 
 function run_code_inside_task(julia_code::String)
+    @show "run_code_inside_task" # DEBUG
     try
         imports, body = separate(Meta.parse(julia_code))
+        @show "run_code_inside_task separate" # DEBUG
         safe && !confirm() && return  # guaranteed to be settable by the user (via the REPL)
         eval(imports)
+        @show "run_code_inside_task eval" # DEBUG
         task = Threads.@spawn eval(body)
+        @show "run_code_inside_task task" # DEBUG
         return taskname(body), task
     catch e
         @show "run_code_inside_task error", e # DEBUG

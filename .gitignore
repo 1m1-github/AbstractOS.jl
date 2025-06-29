@@ -24,8 +24,7 @@ docs/site/
 Manifest.toml
 
 # AbstractOS
-log
-tmp
+log/*
+tmp/*
 
 .DS_Store
-runs

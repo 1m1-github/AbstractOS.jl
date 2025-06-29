@@ -3,10 +3,10 @@ using HTTP, JSON3, HTTP.WebSockets
 function start_websocket(ip, port, BrowserOutputDeviceType)
     @show ip, port, BrowserOutputDeviceType
     WebSockets.listen(ip, port) do ws
-        @show ws
+        @show "ws"
         outputs[:Browser] = BrowserOutputDeviceType(ws)
         for command in ws
-            @show command
+            @show "command", command[1:10]
             if startswith(lowercase(command), "julia>")
                 julia_command = command[length("julia>")+1:end]
                 eval(Meta.parse(julia_command))
