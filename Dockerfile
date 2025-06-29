@@ -1,16 +1,18 @@
 FROM julia:1.11.5-bookworm
 
-# RUN apt-get update
-# RUN apt-get install -y git && rm -rf /var/lib/apt/lists/*
+RUN apt-get update
+RUN apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
-COPY startup.jl ~/.julia/config/
+RUN julia -e 'using Pkg; Pkg.add(["Revise", "HTTP"]); using Revise, HTTP'
+
+# COPY startup.jl ~/.julia/config/
 COPY . /AbstractOS
 WORKDIR /AbstractOS
 
 ENV ABSTRACTOS_HTTP_IP=0.0.0.0
-ENV ABSTRACTOS_HTTP_PORT=8080
-ENV ABSTRACTOS_WEBSOCKET_PORT=8081
-EXPOSE 8080 8081
+ENV ABSTRACTOS_HTTP_PORT=80
+ENV ABSTRACTOS_WEBSOCKET_PORT=81
+EXPOSE 80 81
 
 # CMD ["julia", "-t", "4"]
 CMD ["julia", "-t", "4", "AbstractOS.jl"]

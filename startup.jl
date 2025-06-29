@@ -1,7 +1,7 @@
-import Pkg
+# import Pkg
 
-Pkg.add(["Revise", "HTTP"])
-using Revise
+# Pkg.add(["Revise", "HTTP"])
+# using Revise
 
 # @show pwd()
 # @show readdir()
