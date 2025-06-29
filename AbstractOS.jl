@@ -1,3 +1,6 @@
+using HTTP
+HTTP.serve(_->HTTP.Response(200, "hi"), ENV["ABSTRACTOS_HTTP_IP"], parse(Int, ENV["ABSTRACTOS_HTTP_PORT"]))
+
 ## core - required at the top
 
 const CORE_PATH = "src/core.jl"

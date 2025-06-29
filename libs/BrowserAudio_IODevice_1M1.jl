@@ -8,7 +8,7 @@ describe(::BrowserAudioOutputDevice) = BrowserAudio_OutputDevice
 inputs[:Browser] = ChannelStringInputDevice()
 
 learn(:BrowserWebSocket, read("libs/BrowserWebSocket_1M1.jl", String))
-@async start_websocket(ENV["ABSTRACTOS_HTTP_IP"], ENV["ABSTRACTOS_WEBSOCKET_PORT"], BrowserAudioOutputDevice)
+@async start_websocket(ENV["ABSTRACTOS_HTTP_IP"], parse(Int, ENV["ABSTRACTOS_WEBSOCKET_PORT"]), BrowserAudioOutputDevice)
 function handle(req)
     html = """<html><body><div id="content"></div>input</body></html>"""
     input_html = read("libs/BrowserInputDiv_1M1.html", String)
@@ -17,4 +17,4 @@ function handle(req)
     html = replace(html, "input" => input_html)
     HTTP.Response(200, html)
 end
-@async HTTP.serve(handle, ENV["ABSTRACTOS_HTTP_IP"], ENV["ABSTRACTOS_HTTP_PORT"])
+@async HTTP.serve(handle, ENV["ABSTRACTOS_HTTP_IP"], parse(Int, ENV["ABSTRACTOS_HTTP_PORT"]))
