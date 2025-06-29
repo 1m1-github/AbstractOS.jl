@@ -1,3 +1,11 @@
+@show pwd()
+@show readdir("~/.julia")
+@show readdir("~/.julia/config")
+
+import Pkg
+Pkg.add(["Revise", "HTTP"])
+using Revise
+
 using HTTP
 HTTP.serve(r->HTTP.Response(200, "1"), ENV["ABSTRACTOS_HTTP_IP"], parse(Int, ENV["ABSTRACTOS_HTTP_PORT"]))
 
