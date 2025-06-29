@@ -1,7 +1,3 @@
-@show pwd()
-@show readdir("~/.julia")
-@show readdir("~/.julia/config")
-
 import Pkg
 Pkg.add(["Revise", "HTTP"])
 using Revise
