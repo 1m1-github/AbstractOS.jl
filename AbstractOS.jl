@@ -1,5 +1,5 @@
 using HTTP
-HTTP.serve(r->HTTP.Response(200, "1"), ENV["ABSTRACTOS_HTTP_IP"], ENV["ABSTRACTOS_HTTP_PORT"])
+HTTP.serve(r->HTTP.Response(200, "1"), ENV["ABSTRACTOS_HTTP_IP"], parse(Int, ENV["ABSTRACTOS_HTTP_PORT"]))
 
 # ## core - required at the top
 

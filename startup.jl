@@ -1,9 +1,9 @@
 import Pkg
 
-Pkg.add("Revise")
+Pkg.add(["Revise", "HTTP"])
 using Revise
 
-@show pwd()
-@show readdir()
-cd("AbstractOS")
-include("AbstractOS.jl")
+# @show pwd()
+# @show readdir()
+# cd("AbstractOS")
+# include("AbstractOS.jl")
