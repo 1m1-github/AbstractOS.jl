@@ -3,8 +3,7 @@ FROM julia:1.11.5-bookworm
 # RUN apt-get update
 # RUN apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir ~/.julia/config
-COPY startup.jl ~/.julia/config
+COPY startup.jl ~/.julia/config/
 COPY . /AbstractOS
 WORKDIR /AbstractOS
 
