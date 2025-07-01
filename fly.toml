@@ -5,15 +5,26 @@ primary_region = 'mia'
 
 [build]
 
-[http_service]
+[[services]]
   internal_port = 8080
-  force_https = true
-  auto_stop_machines = true
-  auto_start_machines = true
-  min_machines_running = 0
+  protocol = "tcp"
+  
+  [[services.ports]]
+    force_https = true
+    handlers = ["http"]
+    port = 80
+    
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
 
-[[vm]]
-  size = 'performance-4x'
+[[services]]
+  internal_port = 8081
+  protocol = "tcp"
+  
+  [[services.ports]]
+    handlers = ["tls"]
+    port = 8081
 
 [env]
   ABSTRACTOS_HTTP_IP = "0.0.0.0"
@@ -21,3 +32,6 @@ primary_region = 'mia'
   ABSTRACTOS_OUTER_WEBSOCKET_IP="1m1.fly.dev"
   ABSTRACTOS_INNER_WEBSOCKET_IP="0.0.0.0"
   ABSTRACTOS_WEBSOCKET_PORT = "8081"
+  
+[[vm]]
+  size = 'performance-4x'
