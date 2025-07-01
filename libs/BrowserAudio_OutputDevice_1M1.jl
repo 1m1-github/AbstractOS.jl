@@ -11,16 +11,23 @@
 
 using HTTP.WebSockets
 @api struct BrowserAudioOutputDevice <: OutputDevice
-    ws::WebSocket
+    websockets::Vector{WebSocket}
 end
+
+previous_div_content = ""
 
 using JSON3
 import Base.put!
 @api function put!(device::BrowserAudioOutputDevice, div_content::String, audio_message::String)
+    global previous_div_content
+    previous_div_content = div_content
     msg = Dict(
         :div_content => div_content,
         :audio_message => audio_message,
     )
-    !WebSockets.isclosed(device.ws) && send(device.ws, JSON3.write(msg))
+    for (i, ws) in enumerate(device.websockets)
+        WebSockets.isclosed(ws) && deleteat!(device.websockets, i) && continue
+        send(ws, JSON3.write(msg))
+    end
 end
 describe(::BrowserAudioOutputDevice) = BrowserAudio_OutputDevice

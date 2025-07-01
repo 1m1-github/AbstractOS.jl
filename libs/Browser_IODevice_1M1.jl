@@ -1,6 +1,7 @@
 # set 
 # ENV["ABSTRACTOS_HTTP_IP"]
 # ENV["ABSTRACTOS_HTTP_PORT"]
+# ENV["ABSTRACTOS_OUTER_WEBSOCKET_PROTOCOL"]
 # ENV["ABSTRACTOS_OUTER_WEBSOCKET_IP"]
 # ENV["ABSTRACTOS_INNER_WEBSOCKET_IP"]
 # ENV["ABSTRACTOS_WEBSOCKET_PORT"]
@@ -18,16 +19,23 @@
 
 using HTTP.WebSockets
 @api struct BrowserOutputDevice <: OutputDevice
-    ws::WebSocket
+    websockets::Vector{WebSocket}
 end
+
+previous_div_content = ""
 
 using JSON3
 import Base.put!
 @api function put!(device::BrowserOutputDevice, div_content::String)
+    global previous_div_content
+    previous_div_content = div_content
     msg = Dict(
         :div_content => div_content
     )
-    !WebSockets.isclosed(device.ws) && send(device.ws, JSON3.write(msg))
+    for (i, ws) in enumerate(device.websockets)
+        WebSockets.isclosed(ws) && deleteat!(device.websockets, i) && continue
+        send(ws, JSON3.write(msg))
+    end
 end
 
 describe(::BrowserOutputDevice) = Browser_OutputDevice
@@ -35,12 +43,17 @@ inputs[:Browser] = ChannelStringInputDevice()
 
 learn(:BrowserWebSocket, read("libs/BrowserWebSocket_1M1.jl", String))
 @async start_websocket(ENV["ABSTRACTOS_INNER_WEBSOCKET_IP"], parse(Int, ENV["ABSTRACTOS_WEBSOCKET_PORT"]), BrowserOutputDevice)
+
+include("libs/find_julia_code_1M1.jl")
 function handle(req)
-    html = """<html><body><div id="content"></div>input</body></html>"""
-    input_html = read("libs/BrowserInputDiv_1M1.html", String)
-    input_html = replace(input_html, "// code for audio" => "")
-    input_html = replace(input_html, """\$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_IP"]):\$(ENV["ABSTRACTOS_WEBSOCKET_PORT"])""" => """$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_IP"]):$(ENV["ABSTRACTOS_WEBSOCKET_PORT"])""")
-    html = replace(html, "input" => input_html)
+    input = read("libs/BrowserInputDiv_1M1.html", String)
+    input = replace(input, "// code for audio" => "")
+    input = replace(input, """\$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_PROTOCOL"])://\$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_IP"]):\$(ENV["ABSTRACTOS_WEBSOCKET_PORT"])""" => """$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_PROTOCOL"])://$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_IP"]):$(ENV["ABSTRACTOS_WEBSOCKET_PORT"])""")
+    julia_code = find_julia_code(req.target)
+    global previous_div_content
+    content = isempty(julia_code) ? previous_div_content : string(eval(Meta.parse(julia_code)))
+    content = """<div id="content">$content</div>"""
+    html = """<html><body>$content$input</body></html>"""
     HTTP.Response(200, html)
 end
 @async HTTP.serve(handle, ENV["ABSTRACTOS_HTTP_IP"], parse(Int, ENV["ABSTRACTOS_HTTP_PORT"]))

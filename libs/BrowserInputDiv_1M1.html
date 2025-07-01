@@ -20,7 +20,7 @@
     </style>
     <input type="text" id="subtitles" autocomplete="off" spellcheck="false">
     <script>
-        let ws = new WebSocket('wss://$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_IP"]):$(ENV["ABSTRACTOS_WEBSOCKET_PORT"])');
+        let ws = new WebSocket('$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_PROTOCOL"])://$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_IP"]):$(ENV["ABSTRACTOS_WEBSOCKET_PORT"])');
         ws.onopen = function (event) {
             console.log('WebSocket connected');
         };

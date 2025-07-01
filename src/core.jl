@@ -51,24 +51,25 @@ function listen(device::InputDevice)
         output = take!(device)
         memory[Symbol("$(typeof(device))/output")] = output
         isempty(output) && continue
-        @show output # DEBUG
+        # @show output # DEBUG
         @lock lock run(output)
     end
 end
 
 function run(device_output; files=[])
+    global memory, tasks, signals, errors
     @show "run" # DEBUG
     signals[:stop_run] && ( signals[:stop_run] = false ) && return
     clean(tasks)
-    @show "run cleaned tasks" # DEBUG
+    # @show "run cleaned tasks" # DEBUG
     input = "$(describe())\n$device_output"
-    @show "run input" # DEBUG
-    write("log/input.jl", input) # DEBUG
-    global errors ; errors = Exception[]
+    # @show "run input" # DEBUG
+    # write("log/input.jl", input) # DEBUG
+    errors = Exception[]
     signals[:next_running] = true
     memory[:output] = julia_code = next(input, files=files) # `next` is implemented by the attached intelligence
     # memory[:output] = julia_code = read("log/output.jl", String) # DEBUG
-    @show "run output" # DEBUG
+    # @show "run output" # DEBUG
     signals[:next_running] = false
     println(julia_code)
     write("log/output.jl", julia_code) # DEBUG
@@ -76,34 +77,37 @@ function run(device_output; files=[])
 end
 
 function run_task(julia_code::String)
-    @show "run_task", julia_code # DEBUG
+    # @show "run_task", julia_code # DEBUG
     task_name, task = run_code_inside_task(julia_code)
-    @show task_name, task # DEBUG
+    # @show task_name, task # DEBUG
     isnothing(task_name) && isnothing(task) && return 
     isnothing(task_name) && throw("need to set `task_name`")
+    global tasks
     tasks[task_name] = task
     Threads.@spawn wait_and_monitor_task_for_error(task)
 end
 
 function run_code_inside_task(julia_code::String)
-    @show "run_code_inside_task" # DEBUG
+    # @show "run_code_inside_task" # DEBUG
     try
         imports, body = separate(Meta.parse(julia_code))
-        @show "run_code_inside_task separate" # DEBUG
+        # @show "run_code_inside_task separate" # DEBUG
         safe && !confirm() && return  # guaranteed to be settable by the user (via the REPL)
         eval(imports)
-        @show "run_code_inside_task eval" # DEBUG
+        # @show "run_code_inside_task eval" # DEBUG
         task = Threads.@spawn eval(body)
-        @show "run_code_inside_task task" # DEBUG
+        # @show "run_code_inside_task task" # DEBUG
         return taskname(body), task
     catch e
         @show "run_code_inside_task error", e # DEBUG
+        global errors
         push!(errors, e)
         run("there was an error, try again and never make the same mistake again.")
     end
 end
 
 function describe()::String
+    global inputs, outputs, memory, knowledge, tasks, signals, errors
     join([
             "describe() BEGIN\n",
             "OS source code BEGIN:\n" * read(CORE_PATH, String) * "==\nOS source code END",
@@ -154,6 +158,7 @@ function wait_and_monitor_task_for_error(task::Task)
         bt = catch_backtrace()
         limited_bt = bt[1:min(length(bt), 1000)] # todo magic #
         Base.show_backtrace(stdout, limited_bt)
+        global errors
         push!(errors, e.task.exception)
         run("there was an error, try again and never make the same mistake again, $e, $(e.task.exception).")
     end
@@ -196,6 +201,7 @@ function taskname(code::Expr)
 end
 
 function clean(t::Dict{Symbol, Task})
+    global tasks
     name_and_tasks = map(s -> (s, t[s]), collect(keys(t)))
     done_name_and_tasks = filter(name_and_task -> istaskdone(name_and_task[2]), name_and_tasks)
     map(name_and_task -> delete!(tasks, name_and_task[1]), done_name_and_tasks)
