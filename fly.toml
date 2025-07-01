@@ -1,21 +1,21 @@
-app = 'abstractos'
+# fly deploy --ha=false
+
+app = '1m1'
 primary_region = 'mia'
 
 [build]
 
 [http_service]
   internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
   auto_start_machines = true
   min_machines_running = 0
-  processes = ['app']
-
-[[services]]
-  protocol = 'tcp'
-  internal_port = 8080
-
-  [[services.ports]]
-    port = 80
-    handlers = ['http']
 
 [[vm]]
   size = 'performance-4x'
+
+[env]
+  ABSTRACTOS_HTTP_IP = "0.0.0.0"
+  ABSTRACTOS_HTTP_PORT = "8080"
+  ABSTRACTOS_WEBSOCKET_PORT = "8081"

@@ -46,7 +46,7 @@ end
 # todo @true mode = provable open source, always runs with safe==true
 
 function listen(device::InputDevice)
-    @show "listen", device # DEBUG
+    # @show "listen", device # DEBUG
     while true
         output = take!(device)
         memory[Symbol("$(typeof(device))/output")] = output

@@ -6,7 +6,7 @@ function start_websocket(ip, port, BrowserOutputDeviceType)
         @show "ws"
         outputs[:Browser] = BrowserOutputDeviceType(ws)
         for command in ws
-            @show "command", command[1:10]
+            @show "command", command
             if startswith(lowercase(command), "julia>")
                 julia_command = command[length("julia>")+1:end]
                 eval(Meta.parse(julia_command))
