@@ -1,6 +1,8 @@
 # set 
 # ENV["ABSTRACTOS_HTTP_IP"]
 # ENV["ABSTRACTOS_HTTP_PORT"]
+# ENV["ABSTRACTOS_OUTER_WEBSOCKET_IP"]
+# ENV["ABSTRACTOS_INNER_WEBSOCKET_IP"]
 # ENV["ABSTRACTOS_WEBSOCKET_PORT"]
 
 @api const Browser_OutputDevice = """
@@ -32,12 +34,12 @@ describe(::BrowserOutputDevice) = Browser_OutputDevice
 inputs[:Browser] = ChannelStringInputDevice()
 
 learn(:BrowserWebSocket, read("libs/BrowserWebSocket_1M1.jl", String))
-@async start_websocket(ENV["ABSTRACTOS_HTTP_IP"], parse(Int, ENV["ABSTRACTOS_WEBSOCKET_PORT"]), BrowserOutputDevice)
+@async start_websocket(ENV["ABSTRACTOS_INNER_WEBSOCKET_IP"], parse(Int, ENV["ABSTRACTOS_WEBSOCKET_PORT"]), BrowserOutputDevice)
 function handle(req)
     html = """<html><body><div id="content"></div>input</body></html>"""
     input_html = read("libs/BrowserInputDiv_1M1.html", String)
     input_html = replace(input_html, "// code for audio" => "")
-    input_html = replace(input_html, """ws://\$(ENV["ABSTRACTOS_HTTP_IP"]):\$(ENV["ABSTRACTOS_WEBSOCKET_PORT"])""" => """ws://$(ENV["ABSTRACTOS_HTTP_IP"]):$(ENV["ABSTRACTOS_WEBSOCKET_PORT"])""")
+    input_html = replace(input_html, """\$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_IP"]):\$(ENV["ABSTRACTOS_WEBSOCKET_PORT"])""" => """$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_IP"]):$(ENV["ABSTRACTOS_WEBSOCKET_PORT"])""")
     html = replace(html, "input" => input_html)
     HTTP.Response(200, html)
 end

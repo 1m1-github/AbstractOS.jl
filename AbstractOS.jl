@@ -39,5 +39,8 @@ learn(:RonWayneOpinion, read("libs/RonWayneOpinion_1M1.jl", String))
 [Threads.@spawn listen(inputs[device]) for device in keys(inputs)]
 
 ## REPL to block
+# learn(:REPL, read("libs/REPL_OutputDevice_1M1.jl", String))
 
-learn(:REPL, read("libs/REPL_OutputDevice_1M1.jl", String))
+## block
+
+wait(Condition())

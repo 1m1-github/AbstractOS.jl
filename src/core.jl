@@ -27,13 +27,13 @@ function learn(code_name::Symbol, code::String)
     try
         clean_code = replace(code, "@api " => "")
         code_expr = Meta.parse("begin $clean_code end")
-        @show "learn, code_expr" # DEBUG
+        # @show "learn, code_expr" # DEBUG
         code_name ∈ keys(knowledge) && return
-        @show "learn, code_name ∉ keys(knowledge)" # DEBUG
+        # @show "learn, code_name ∉ keys(knowledge)" # DEBUG
         code ∈ collect(values(knowledge)) && return
-        @show "learn, code ∉ collect(values(knowledge))" # DEBUG
+        # @show "learn, code ∉ collect(values(knowledge))" # DEBUG
         eval(code_expr)
-        @show "learn, eval" # DEBUG
+        # @show "learn, eval" # DEBUG
         knowledge[code_name] = code
         write("libs/$(code_name)_1M1.jl", code)
         @show "learned $code_name"  # DEBUG
