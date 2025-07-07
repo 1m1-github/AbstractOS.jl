@@ -33,10 +33,10 @@
     <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
     <script>
         const apiKey = 'ENV["HEYGEN_API_KEY"]';
-        const avatarId = 'ae024d98fd1e479ba3dfe80e69c3f946'; // Ron
-        const voiceId = 'ef4c1eb1cafe4d47b96b195f2d5fca2f'; // Ron
-        // const avatarId = '547c4c53644a4a6bb3700a11c877b8f0'; // Joann
-        // const voiceId = '06e5e9cd1468464c9eb6a72b130c284d'; // Joann
+        // const avatarId = 'ae024d98fd1e479ba3dfe80e69c3f946'; // Ron
+        // const voiceId = 'ef4c1eb1cafe4d47b96b195f2d5fca2f'; // Ron
+        const avatarId = '547c4c53644a4a6bb3700a11c877b8f0'; // Joann
+        const voiceId = '06e5e9cd1468464c9eb6a72b130c284d'; // Joann
 
         let livekitRoom = null;
         let wsConnection = null;
@@ -119,6 +119,7 @@
                 sessionInfo = await createSession(accessToken, avatarId, voiceId);
                 setInterval(keepAlive, 60000);
                 await startStreaming(accessToken, sessionInfo.data.session_id);
+                
                 livekitRoom = new LivekitClient.Room({
                     adaptiveStream: true,
                     dynacast: true,

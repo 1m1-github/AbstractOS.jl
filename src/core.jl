@@ -14,7 +14,7 @@ outputs = Dict{Symbol, OutputDevice}()
 memory = Dict{Symbol, Any}()
 knowledge = Dict{Symbol, String}()
 tasks = Dict{Symbol, Task}()
-signals = Dict{Symbol, Bool}(:stop_run => false)
+signals = Dict{Symbol, Bool}(:stop_run => false, :next_running => false)
 errors = Exception[]
 
 macro api(args...) 

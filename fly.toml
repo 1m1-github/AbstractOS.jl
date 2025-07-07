@@ -5,6 +5,10 @@ primary_region = 'mia'
 
 [build]
 
+[[mounts]]
+  source = "my_volume"
+  destination = "/data"
+
 [[services]]
   internal_port = 8080
   protocol = "tcp"

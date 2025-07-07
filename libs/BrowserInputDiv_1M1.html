@@ -28,18 +28,10 @@
             console.log('WebSocket onmessage', event.data);
 
             const data = JSON.parse(event.data);
-            let contentDiv = document.getElementById('content');
-            contentDiv.innerHTML = data.div_content;
-
-            const scripts = contentDiv.getElementsByTagName('script');
-            for (const script of scripts) {
-                const newScript = document.createElement('script');
-                newScript.textContent = script.textContent;
-                document.head.appendChild(newScript);
-                document.head.removeChild(newScript);
-            }
-
-            // code for audio
+            const newScript = document.createElement('script');
+            newScript.textContent = data.javascript;
+            document.head.appendChild(newScript);
+            document.head.removeChild(newScript);
         };
         ws.onclose = function (event) {
             console.log('WebSocket closed');

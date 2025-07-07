@@ -7,6 +7,9 @@ connects to a text input (via a keyboard or transcribed from a mic).
     command_channel::Channel{String}
 end
 import Base.take!
-@api take!(device::ChannelStringInputDevice)::String = take!(device.command_channel)
+@api take!(device::ChannelStringInputDevice)::String = begin
+    command = take!(device.command_channel)
+    "the command from the br$command"
+end
 describe(::ChannelStringInputDevice) = ChannelString_InputDevice
 ChannelStringInputDevice() = ChannelStringInputDevice(Channel{String}(0))
