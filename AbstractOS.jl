@@ -11,19 +11,21 @@ learn(:Claude_next, read("libs/Claude_next_1M1.jl", String))
 
 ## devices
 
-# learn(:ChannelString_InputDevice, read("libs/ChannelString_InputDevice_1M1.jl", String))
-# learn(:MiniFB_OutputDevice, read("libs/MiniFB_OutputDevice_1M1.jl", String))
-# learn(:Browser_IODevice, read("libs/BrowserIODevice_1M1.jl", String))
-# learn(:BrowserAudio_IODevice, read("libs/BrowserAudioIODevice_1M1.jl", String))
-learn(:BrowserHeyGen_IODevice, read("libs/BrowserHeyGenIODevice_1M1.jl", String))
+learn(:ChannelStringInputDevice, read("libs/ChannelStringInputDevice_1M1.jl", String))
+# learn(:MiniFBOutputDevice, read("libs/MiniFBOutputDevice_1M1.jl", String))
+learn(:BrowserIODevice, read("libs/BrowserIODevice_1M1.jl", String))
+# learn(:BrowserAudioIODevice, read("libs/BrowserAudioIODevice_1M1.jl", String))
+# learn(:BrowserHeyGenIODevice, read("libs/BrowserHeyGenIODevice_1M1.jl", String))
 
 ## knowledge
 
 learn(:Advice, read("libs/Advice_1M1.jl", String))
-learn(:Advice, read("libs/LearningAdvice_1M1.jl", String))
-learn(:Advice, read("libs/Fly_io_1M1.jl", String))
+learn(:LearningAdvice, read("libs/LearningAdvice_1M1.jl", String))
+# learn(:FlyIO, read("libs/Fly_io_1M1.jl", String))
 learn(:ReliableEngineering, read("libs/ReliableEngineering_1M1.jl", String))
 # learn(:RonWayneOpinion, read("libs/RonWayneOpinion_1M1.jl", String))
+# learn(:Onboarding, read("libs/Onboarding_1M1.jl", String))
+# learn(:LegalReferral, read("libs/LegalReferral_1M1.jl", String))
 
 # learn(:DrawWithCairo, read("libs/DrawWithCairo_1M1.jl", String))
 # learn(:DisplaySimpleText_1M1, read("libs/DisplaySimpleText_1M1.jl", String))

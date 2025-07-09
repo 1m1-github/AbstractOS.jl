@@ -1,4 +1,4 @@
-current_html = "<html></html>"
+# current_html = "<html></html>"
 
 @api const BrowserInputDeviceDescription = 
 """
@@ -11,16 +11,7 @@ connects to a text input (via a keyboard or transcribed from a mic) from the bro
 end
 
 import Base.take!
-@api take!(device::BrowserInputDevice)::String = begin
-    command = take!(device.command_channel)
-    global current_html
-    join([
-        "the current html is:",
-        current_html,
-        "the command from the browser is:",
-        command
-    ], '\n')
-end
+@api take!(device::BrowserInputDevice)::String = take!(device.command_channel)
 
 describe(::BrowserInputDevice) = BrowserInputDeviceDescription
 BrowserInputDevice() = BrowserInputDevice(Channel{String}(0))

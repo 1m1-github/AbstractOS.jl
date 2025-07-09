@@ -1,5 +1,7 @@
 learn(:BrowserOutputDevice, read("libs/BrowserOutputDevice_1M1.jl", String))
-@api struct BrowserAudioOutputDevice <: BrowserOutputDevice end
+@api struct BrowserAudioOutputDevice <: BrowserOutputDeviceAbstract
+    websockets::Vector{WebSocket}
+end
 
 @api const BrowserAudioOutputDeviceDescription = 
 """

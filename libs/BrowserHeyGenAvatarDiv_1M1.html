@@ -1,4 +1,4 @@
-<div id="avatar">
+<div id="avatar_1M1">
     <style>
         .video-container {
             position: fixed;
@@ -117,7 +117,7 @@
             try {
                 const accessToken = await createAccessToken(apiKey);
                 sessionInfo = await createSession(accessToken, avatarId, voiceId);
-                setInterval(keepAlive, 60000);
+                setInterval(keepAlive, 10000);
                 await startStreaming(accessToken, sessionInfo.data.session_id);
                 
                 livekitRoom = new LivekitClient.Room({

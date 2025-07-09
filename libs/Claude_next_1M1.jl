@@ -51,7 +51,6 @@ function claude_chat(message::String; files=[], model="claude-sonnet-4-20250514"
         end
     end
     
-    # Add the text message
     push!(content, Dict(
         "type" => "text",
         "text" => message
@@ -67,6 +66,7 @@ function claude_chat(message::String; files=[], model="claude-sonnet-4-20250514"
     ))
     
     try
+        # @show body # DEBUG
         response = HTTP.post(
             "https://api.anthropic.com/v1/messages",
             headers,

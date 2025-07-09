@@ -61,10 +61,10 @@ function run(device_output; files=[])
     @show "run" # DEBUG
     signals[:stop_run] && ( signals[:stop_run] = false ) && return
     clean(tasks)
-    # @show "run cleaned tasks" # DEBUG
+    @show "run cleaned tasks" # DEBUG
     input = "$(describe())\n$device_output"
-    # @show "run input" # DEBUG
-    # write("log/input.jl", input) # DEBUG
+    @show "run input" # DEBUG
+    write("log/input.jl", input) # DEBUG
     errors = Exception[]
     signals[:next_running] = true
     memory[:output] = julia_code = next(input, files=files) # `next` is implemented by the attached intelligence
