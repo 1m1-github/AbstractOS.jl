@@ -38,20 +38,20 @@ function start_websocket(host, port, BrowserOutputDeviceType)
         else
             outputs[:Browser] = BrowserOutputDeviceType([websocket])
         end
-        for html_and_command_string in websocket
+            for html_and_command_string in websocket
             @show "websocket" # DEBUG
             html_and_command = JSON3.read(html_and_command_string)
             command = html_and_command.command
             @show "command", command # DEBUG
+            global content_1M1
+            @show content_1M1, html_and_command.content_1M1 # DEBUG
+            content_1M1 = html_and_command.content_1M1
             if startswith(lowercase(command), "julia>")
                 julia_command = command[length("julia>")+1:end]
                 eval(Meta.parse(julia_command))
                 continue
             end
-            global current_html
-            @show "current_html", current_html, html_and_command.html # DEBUG
-            current_html = html_and_command.html
-            put!(inputs[:Browser].command_channel, """the following is the current html of the `content_1M1` div from the browser and after it the command of the user. you thus use javascript to precisely manipulate the div:\n$(current_html)\nuser command:\n$command""")
+            put!(inputs[:Browser].command_channel, """the following is the current html of the `content_1M1` div from the browser and after it the command of the user. you thus use javascript to precisely manipulate the div:\n$(content_1M1)\nuser command:\n$command""")
         end
         @show "after command" # DEBUG
     end

@@ -67,8 +67,9 @@ function run(device_output; files=[])
     write("log/input.jl", input) # DEBUG
     errors = Exception[]
     signals[:next_running] = true
-    memory[:output] = julia_code = next(input, files=files) # `next` is implemented by the attached intelligence
-    # memory[:output] = julia_code = read("log/output.jl", String) # DEBUG
+    # memory[:output] = julia_code = next(input, files=files) # `next` is implemented by the attached intelligence
+    memory[:output] = julia_code = read("log/output.jl", String) # DEBUG
+    sleep(3)
     # @show "run output" # DEBUG
     signals[:next_running] = false
     println(julia_code)

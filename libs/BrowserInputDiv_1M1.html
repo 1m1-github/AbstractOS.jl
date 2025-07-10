@@ -24,7 +24,9 @@
 
             const data = JSON.parse(event.data);
             let contentDiv = document.getElementById('content_1M1');
-            contentDiv.innerHTML = data.content_1M1;
+            if(data.content_1M1) {
+                contentDiv.innerHTML = data.content_1M1;
+            }
 
             const scripts = contentDiv.getElementsByTagName('script');
             for (const script of scripts) {
@@ -37,14 +39,12 @@
             // sendTask(data.audio_message);
             // speechSynthesis.speak(new SpeechSynthesisUtterance(data.audio_message));
 
-            // const data = JSON.parse(event.data);
-            // const newScript = document.createElement('script');
-            // console.log('hi');
-            // console.log('data', data);
-            // console.log('data.javascript', data.javascript);
-            // newScript.textContent = data.javascript;
-            // document.head.appendChild(newScript);
-            // document.head.removeChild(newScript);
+            if (data.javascript) {
+                const newScript = document.createElement('script');
+                newScript.textContent = data.javascript;
+                document.head.appendChild(newScript);
+                document.head.removeChild(newScript);
+            }
         };
         ws.onclose = function (event) {
             console.log('WebSocket closed');
@@ -57,20 +57,12 @@
         subtitles.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                const docClone = document.cloneNode(true);
-                let divToRemove = docClone.getElementById('input_1M1');
-                if (divToRemove) divToRemove.remove();
-                // divToRemove = docClone.getElementById('avatar_1M1');
-                // if (divToRemove) divToRemove.remove();
-                divToRemove = docClone.getElementById('signals_1M1');
-                if (divToRemove) divToRemove.remove();
-                const htmlString = docClone.documentElement.outerHTML;
+                const content_1M1 = document.getElementById('content_1M1').innerHTML;
                 const jsonString = JSON.stringify({
-                    html: htmlString,
+                    content_1M1: content_1M1,
                     command: subtitles.value
                 });
                 ws.send(jsonString);
-                // ws.send(subtitles.value);
                 subtitles.value = '';
             }
         });

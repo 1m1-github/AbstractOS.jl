@@ -8,7 +8,7 @@ using HTTP, JSON
 
 @api MAX_OUTPUT_TOKENS = 10000
 
-function callXAIAPI(apiKey::String, systemPrompt::String, userPrompt::String; model::String="grok-3", maxTokens::Int)::String
+function callXAIAPI(apiKey::String, systemPrompt::String, userPrompt::String; model::String="grok-4", maxTokens::Int)::String
     url = "https://api.x.ai/v1/chat/completions"
     
     headers = [

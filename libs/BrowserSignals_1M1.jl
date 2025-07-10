@@ -1,14 +1,10 @@
 function start_browser_signals()
-    global signals
-    # previous_signal_next_running = signals[:next_running]
-    @async while true
+    while true
         sleep(1)
+        global outputs
         !haskey(outputs, :Browser) && continue
-        # previous_signal_next_running == signals[:next_running] && continue
-        # previous_signal_next_running = signals[:next_running]
-        # style_display = previous_signal_next_running ? "inline-block" : "none"
-        put!(outputs[:Browser], "<script>document.getElementById('signals_1M1').innerHTML='$signals'</script>")
-        # put!(outputs[:Browser], "document.getElementById('signals_1M1').innerHTML='$signals'")
+        global signals
+        put!(outputs[:Browser], "", "document.getElementById('signals_1M1').innerHTML='$signals'")
     end
 end
-@async start_browser_signals()
+tasks[:browser_signals] = @async start_browser_signals()

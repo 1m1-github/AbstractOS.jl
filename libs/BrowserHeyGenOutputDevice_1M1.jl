@@ -37,7 +37,11 @@ import Base.put!
         :audio_message => audio_message,
     )
     for (i, ws) in enumerate(device.websockets)
-        WebSockets.isclosed(ws) && deleteat!(device.websockets, i) && continue
+        # WebSockets.isclosed(ws) && deleteat!(device.websockets, i) && continue
+        if WebSockets.isclosed(ws)
+            deleteat!(device.websockets, i)
+            continue
+        end
         send(ws, JSON3.write(msg))
     end
 end
