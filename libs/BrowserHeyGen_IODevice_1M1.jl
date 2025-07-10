@@ -29,7 +29,7 @@ function handle(req)
     global previous_div_content, previous_audio_message
     content = isempty(julia_code) ? previous_div_content : string(eval(Meta.parse(julia_code)))
     content = """<div id="content">$content</div><script>sendTask('$(previous_audio_message)')</script>"""
-    html = """<html><body>$content$input$avatar</body></html>"""
+    html = """<html><body>$input$avatar$content</body></html>"""
     HTTP.Response(200, html)
 end
 @async HTTP.serve(handle, ENV["ABSTRACTOS_HTTP_IP"], parse(Int, ENV["ABSTRACTOS_HTTP_PORT"]))
