@@ -14,24 +14,20 @@ end
                                   currently, you cannot see the log or errors in the browser, so try to keep browser code simple and you could use try catch to communicate errors in the (Julia) system to the browser.
                                   """
 
-# @api const BrowserHeyGenOutputDeviceDescription = 
-# """
-# `put!(device::BrowserHeyGenOutputDevice, javascript::String, audio_message::String)`
-# connects to a with a `BrowserOutputDevice` and has the HeyGen avatar speak `audio_message`.
-# """
+using HTTP.WebSockets
+@api struct BrowserAudioOutputDevice <: OutputDevice
+    websockets::Vector{WebSocket}
+end
+
+previous_div_content = ""
+previous_audio_message = ""
 
 using JSON3
 import Base.put!
-# @api function put!(device::BrowserHeyGenOutputDevice, javascript::String, audio_message::String)
-# @api function put!(device::BrowserHeyGenOutputDevice, div_content::String, audio_message::String)
-    # @debug "put! 1"
-    # javascript_with_audio_message = javascript * """\nsendTask("$(audio_message)")"""
-    # put!(device, javascript_with_audio_message)
-# end
-# previous_div_content=""
-@api function put!(device::BrowserHeyGenOutputDevice, div_content::String, audio_message::String)
-    global previous_div_content
+@api function put!(device::BrowserAudioOutputDevice, div_content::String, audio_message::String)
+    global previous_div_content, previous_audio_message
     previous_div_content = div_content
+    previous_audio_message = audio_message
     msg = Dict(
         :div_content => div_content,
         :audio_message => audio_message,
