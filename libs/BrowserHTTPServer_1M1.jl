@@ -41,6 +41,7 @@ end
 
 function add_content(html)
     global body_start_tag, content_1M1
+    # @show "add_content", content_1M1
     content_html = """<div id="content_1M1">$(content_1M1)</div>"""
     replace(html, body_start_tag => "$(body_start_tag)$(content_html)")
 end
@@ -68,6 +69,7 @@ function handle_http_request(req)
         julia_response = ""
         try
             julia_response = string(eval(Meta.parse(julia_code)))
+            julia_response = replace(julia_response, '`' => ''')
         catch e
             julia_response = "$e"
         end
@@ -76,7 +78,7 @@ function handle_http_request(req)
         html = deepcopy(base_html)
         html = add_input(html)
         html = add_signals(html)
-        julia_response_html = """<script>document.getElementById('content_1M1').textContent='$(julia_response)'</script>"""
+        julia_response_html = """<script>document.getElementById('content_1M1').textContent=`$(julia_response)`</script>"""
         html = replace(html, body_start_tag => "$(body_start_tag)$(julia_response_html)")
         content_html = """<div id="content_1M1"></div>"""
         html = replace(html, body_start_tag => "$(body_start_tag)$(content_html)")

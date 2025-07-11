@@ -1,4 +1,5 @@
-<div id="input_1M1" style="position: fixed;
+<div id="input_1M1">
+    <input type="text" id="subtitles_1M1" autocomplete="off" spellcheck="false" style="position: fixed;
             bottom: 50px;
             left: 50%;
             transform: translateX(-50%);
@@ -13,18 +14,17 @@
             border: 1px solid #ccc;
             outline: none;
             width: 90%;">
-    <input type="text" id="subtitles_1M1" autocomplete="off" spellcheck="false">
     <script>
-        let ws = new WebSocket('$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_PROTOCOL"])://$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_IP"]):$(ENV["ABSTRACTOS_WEBSOCKET_PORT"])');
-        ws.onopen = function (event) {
+        const websocket = new WebSocket('$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_PROTOCOL"])://$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_IP"]):$(ENV["ABSTRACTOS_WEBSOCKET_PORT"])');
+        websocket.onopen = function (event) {
             console.log('WebSocket connected');
         };
-        ws.onmessage = function (event) {
+        websocket.onmessage = function (event) {
             console.log('WebSocket onmessage', event.data);
 
             const data = JSON.parse(event.data);
             let contentDiv = document.getElementById('content_1M1');
-            if(data.content_1M1) {
+            if (data.content_1M1) {
                 contentDiv.innerHTML = data.content_1M1;
             }
 
@@ -46,10 +46,10 @@
                 document.head.removeChild(newScript);
             }
         };
-        ws.onclose = function (event) {
+        websocket.onclose = function (event) {
             console.log('WebSocket closed');
         };
-        ws.onerror = function (error) {
+        websocket.onerror = function (error) {
             console.error('WebSocket error:', error);
         };
 
@@ -62,7 +62,7 @@
                     content_1M1: content_1M1,
                     command: subtitles.value
                 });
-                ws.send(jsonString);
+                websocket.send(jsonString);
                 subtitles.value = '';
             }
         });

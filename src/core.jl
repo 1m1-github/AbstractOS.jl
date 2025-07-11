@@ -58,23 +58,24 @@ end
 
 function run(device_output; files=[])
     global memory, tasks, signals, errors
-    @show "run" # DEBUG
+    # @show "run" # DEBUG
     signals[:stop_run] && ( signals[:stop_run] = false ) && return
     clean(tasks)
-    @show "run cleaned tasks" # DEBUG
+    # @show "run cleaned tasks" # DEBUG
     input = "$(describe())\n$device_output"
-    @show "run input" # DEBUG
+    # @show "run input" # DEBUG
     write("log/input.jl", input) # DEBUG
+    input = read("log/input.jl", String)
     errors = Exception[]
     signals[:next_running] = true
-    # memory[:output] = julia_code = next(input, files=files) # `next` is implemented by the attached intelligence
-    memory[:output] = julia_code = read("log/output.jl", String) # DEBUG
-    sleep(3)
+    memory[:output] = julia_code = next(input, files=files) # `next` is implemented by the attached intelligence
+    # memory[:output] = julia_code = read("log/output.jl", String) # DEBUG
     # @show "run output" # DEBUG
     signals[:next_running] = false
     println(julia_code)
     write("log/output.jl", julia_code) # DEBUG
-    run_task("begin $julia_code end")
+    julia_code = "begin $julia_code end"
+    run_task(julia_code)
 end
 
 function run_task(julia_code::String)

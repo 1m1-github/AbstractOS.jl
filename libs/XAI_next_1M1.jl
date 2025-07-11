@@ -1,5 +1,5 @@
 @api const XAI_next = """
-this knowledge connects to X AI
+this knowledge connects to X AI. `files` in `next(input::String; files=[])::String` is currently unused (not yet implemented).
 """
 
 import Pkg
@@ -10,12 +10,12 @@ using HTTP, JSON
 
 function callXAIAPI(apiKey::String, systemPrompt::String, userPrompt::String; model::String="grok-4", maxTokens::Int)::String
     url = "https://api.x.ai/v1/chat/completions"
-    
+
     headers = [
         "Authorization" => "Bearer $apiKey",
         "Content-Type" => "application/json"
     ]
-    
+
     body = Dict(
         "model" => model,
         "messages" => [
@@ -31,6 +31,7 @@ function callXAIAPI(apiKey::String, systemPrompt::String, userPrompt::String; mo
     result["choices"][1]["message"]["content"]
 end
 
-@api function next(input::String)::String
+@api function next(input::String; files=[])::String
+    global YOUR_PURPOSE, MAX_OUTPUT_TOKENS
     callXAIAPI(ENV["X_AI_API_KEY"], YOUR_PURPOSE, input, maxTokens=MAX_OUTPUT_TOKENS)
 end
