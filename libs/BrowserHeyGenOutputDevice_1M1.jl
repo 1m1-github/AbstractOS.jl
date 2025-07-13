@@ -24,7 +24,7 @@ using JSON3
 import Base.put!
 # @api function put!(device::BrowserHeyGenOutputDevice, javascript::String, audio_message::String)
 # @api function put!(device::BrowserHeyGenOutputDevice, div_content::String, audio_message::String)
-    # @show "put! 1"
+    # @log "put! 1"
     # javascript_with_audio_message = javascript * """\nsendTask("$(audio_message)")"""
     # put!(device, javascript_with_audio_message)
 # end

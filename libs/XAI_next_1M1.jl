@@ -8,24 +8,27 @@ using HTTP, JSON
 
 @api MAX_OUTPUT_TOKENS = 10000
 
-function callXAIAPI(apiKey::String, systemPrompt::String, userPrompt::String; model::String="grok-4", maxTokens::Int)::String
+function callXAIAPI(api_key::String, system_prompt::String, user_prompt::String; model::String="grok-4", max_tokens::Int)::String
     url = "https://api.x.ai/v1/chat/completions"
 
     headers = [
-        "Authorization" => "Bearer $apiKey",
+        "Authorization" => "Bearer $(api_key)",
         "Content-Type" => "application/json"
     ]
 
     body = Dict(
         "model" => model,
         "messages" => [
-            Dict("role" => "system", "content" => systemPrompt),
-            Dict("role" => "user", "content" => userPrompt)
+            Dict("role" => "system", "content" => system_prompt),
+            Dict("role" => "user", "content" => user_prompt)
         ],
-        "max_tokens" => maxTokens,
-        "temperature" => 0.9
+        "max_tokens" => max_tokens,
+        "temperature" => 0.2,
+        "top_p" => 0.5,
+        # "frequency_penalty" => 0.2,
+        # "presence_penalty" => 0.2
     )
-
+@info length(user_prompt)
     response = HTTP.post(url, headers, JSON.json(body))
     result = JSON.parse(String(response.body))
     result["choices"][1]["message"]["content"]

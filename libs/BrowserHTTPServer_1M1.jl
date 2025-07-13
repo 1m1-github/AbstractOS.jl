@@ -26,6 +26,7 @@ function find_julia_code_http_query_param(query_param)
 end
 
 function add_avatar(html)
+    @log length(html)
     global body_start_tag
     avatar_html = read("libs/BrowserHeyGenAvatarDiv_1M1.html", String)
     avatar_html = replace(avatar_html, """ENV["HEYGEN_API_KEY"]""" => ENV["HEYGEN_API_KEY"])
@@ -33,6 +34,7 @@ function add_avatar(html)
 end
 
 function add_input(html)
+    @log length(html)
     global body_start_tag
     input_html = read("libs/BrowserInputDiv_1M1.html", String)
     input_html = replace(input_html, """\$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_PROTOCOL"])://\$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_IP"]):\$(ENV["ABSTRACTOS_WEBSOCKET_PORT"])""" => """$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_PROTOCOL"])://$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_IP"]):$(ENV["ABSTRACTOS_WEBSOCKET_PORT"])""")
@@ -40,13 +42,15 @@ function add_input(html)
 end
 
 function add_content(html)
+    @log length(html)
     global body_start_tag, content_1M1
-    # @show "add_content", content_1M1
+    @log length(content_1M1)
     content_html = """<div id="content_1M1">$(content_1M1)</div>"""
     replace(html, body_start_tag => "$(body_start_tag)$(content_html)")
 end
 
 function add_signals(html)
+    @log length(html)
     global body_start_tag, signals
     signals_html = """<div id="signals_1M1" style="position: fixed; top: 0; left: 0; width: 100%; background: #f0f0f0; border-bottom: 1px solid #ccc; padding: 8px 16px; z-index: 1000; font-family: Arial, sans-serif;">$signals</div>"""
     replace(html, body_start_tag => "$(body_start_tag)$(signals_html)")
@@ -62,9 +66,12 @@ function create_html()
 end
 
 function handle_http_request(req)
-    @show "handle_http_request", req.target # DEBUG
+    @log req.target # DEBUG
+    req.target == "/.well-known/appspecific/com.chrome.devtools.json" && return HTTP.Response(200, ["Content-Type" => "application/json"], "[]")
+    req.target == "/favicon.ico" && return HTTP.Response(200, ["Content-Type" => "image/x-icon"], read("favicon.ico"))
     julia_code = find_julia_code_http_query_param(req.target)
-    @show julia_code # DEBUG
+    @log julia_code # DEBUG
+    headers = ["Content-Security-Policy" => "script-src 'self' 'unsafe-inline' 'unsafe-eval' 127.0.0.1"]
     if !isempty(julia_code)
         julia_response = ""
         try
@@ -73,7 +80,7 @@ function handle_http_request(req)
         catch e
             julia_response = "$e"
         end
-        @show julia_response # DEBUG
+        @log julia_response # DEBUG
         global base_html
         html = deepcopy(base_html)
         html = add_input(html)
@@ -82,9 +89,11 @@ function handle_http_request(req)
         html = replace(html, body_start_tag => "$(body_start_tag)$(julia_response_html)")
         content_html = """<div id="content_1M1"></div>"""
         html = replace(html, body_start_tag => "$(body_start_tag)$(content_html)")
-        return HTTP.Response(200, ["Content-Security-Policy" => "script-src 'self' 'unsafe-inline' 'unsafe-eval' 127.0.0.1"], html)
+        @log "julia_response html", html
+        return HTTP.Response(200, headers, html)
     end
     html = create_html()
-    HTTP.Response(200, ["Content-Security-Policy" => "script-src 'self' 'unsafe-inline' 'unsafe-eval' 127.0.0.1"], html)
+    @log html
+    HTTP.Response(200, headers, html)
 end
 @async HTTP.serve(handle_http_request, ENV["ABSTRACTOS_HTTP_IP"], parse(Int, ENV["ABSTRACTOS_HTTP_PORT"]))

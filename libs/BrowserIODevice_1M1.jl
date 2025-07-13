@@ -2,10 +2,7 @@
 # ENV["ABSTRACTOS_INNER_WEBSOCKET_IP"]
 # ENV["ABSTRACTOS_WEBSOCKET_PORT"]
 
-@api const BrowserIODeviceDescription = 
-"""
-
-"""
+# @api const BrowserIODeviceDescription = """"""
 
 learn(:BrowserOutputDevice, read("libs/BrowserOutputDevice_1M1.jl", String))
 

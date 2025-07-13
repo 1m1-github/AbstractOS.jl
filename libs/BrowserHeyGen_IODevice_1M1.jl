@@ -1,17 +1,17 @@
 # https://app.heygen.com
 # https://1m1.fly.dev
-# https://1m1.fly.dev?julia=@show memory
+# https://1m1.fly.dev?julia=@log memory
 # https://1m1.fly.dev/yourcomputernumber
 # https://1m1.fly.dev/yourcomputernumber?julia=somejuliacode
 
 # set 
-# @show ENV["HEYGEN_API_KEY"]
-# @show ENV["ABSTRACTOS_HTTP_IP"]
-# @show ENV["ABSTRACTOS_HTTP_PORT"]
-# @show ENV["ABSTRACTOS_OUTER_WEBSOCKET_PROTOCOL"]
-# @show ENV["ABSTRACTOS_OUTER_WEBSOCKET_IP"]
-# @show ENV["ABSTRACTOS_INNER_WEBSOCKET_IP"]
-# @show ENV["ABSTRACTOS_WEBSOCKET_PORT"]
+# @log ENV["HEYGEN_API_KEY"]
+# @log ENV["ABSTRACTOS_HTTP_IP"]
+# @log ENV["ABSTRACTOS_HTTP_PORT"]
+# @log ENV["ABSTRACTOS_OUTER_WEBSOCKET_PROTOCOL"]
+# @log ENV["ABSTRACTOS_OUTER_WEBSOCKET_IP"]
+# @log ENV["ABSTRACTOS_INNER_WEBSOCKET_IP"]
+# @log ENV["ABSTRACTOS_WEBSOCKET_PORT"]
 
 learn(:BrowserHeyGenOutputDevice, read("libs/BrowserHeyGenOutputDevice_1M1.jl", String))
 

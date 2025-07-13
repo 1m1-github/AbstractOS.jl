@@ -1,19 +1,22 @@
+# DEBUG
+include("libs/log.jl")
+
 ## core - required at the top
 
 const CORE_PATH = "src/core.jl"
 include(CORE_PATH)
 
 ## intelligence - exactly 1 should be used
-learn(:Claude_next, read("libs/Claude_next_1M1.jl", String))
-# learn(:XAI_next, read("libs/XAI_next_1M1.jl", String))
+# learn(:Claude_next, read("libs/Claude_next_1M1.jl", String))
+learn(:XAI_next, read("libs/XAI_next_1M1.jl", String))
 
 ## @true - todo
 
 ## devices
 
-learn(:ChannelStringInputDevice, read("libs/ChannelStringInputDevice_1M1.jl", String))
+# learn(:ChannelStringInputDevice, read("libs/ChannelStringInputDevice_1M1.jl", String))
 # learn(:MiniFBOutputDevice, read("libs/MiniFBOutputDevice_1M1.jl", String))
-learn(:BrowserIODevice, read("libs/BrowserIODevice_1M1.jl", String))
+# learn(:BrowserIODevice, read("libs/BrowserIODevice_1M1.jl", String))
 # learn(:BrowserAudioIODevice, read("libs/BrowserAudioIODevice_1M1.jl", String))
 # learn(:BrowserHeyGenIODevice, read("libs/BrowserHeyGenIODevice_1M1.jl", String))
 
@@ -46,4 +49,4 @@ learn(:ReliableEngineering, read("libs/ReliableEngineering_1M1.jl", String))
 
 ## block
 
-wait(Condition())
+# wait(Condition())

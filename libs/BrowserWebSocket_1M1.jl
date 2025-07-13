@@ -8,29 +8,36 @@ else it is `put!` to `outputs[:Browser]`, which contains the `content_1M1` `div`
 """
 
 function start_websocket(host, port, BrowserOutputDeviceType)
-    @show host, port, BrowserOutputDeviceType # DEBUG
+    @log host, port, BrowserOutputDeviceType # DEBUG
     WebSockets.listen(host, port) do websocket
+        @log "websocket" # DEBUG
         if haskey(outputs, :Browser)
+            @log "haskey(outputs, :Browser)", length(outputs[:Browser].websockets) # DEBUG
             push!(outputs[:Browser].websockets, websocket)
         else
+            @log "!haskey(outputs, :Browser), new outputs[:Browser]" # DEBUG
             outputs[:Browser] = BrowserOutputDeviceType([websocket])
         end
-            for html_and_command_string in websocket
-            @show "websocket" # DEBUG
+        for html_and_command_string in websocket
+            @log "html_and_command_string" # DEBUG
             html_and_command = JSON3.read(html_and_command_string)
             command = html_and_command.command
-            @show "command", command # DEBUG
+            @log "command", command # DEBUG
             global content_1M1
-            # @show content_1M1, html_and_command.content_1M1 # DEBUG
+            @log length(content_1M1), length(html_and_command.content_1M1) # DEBUG
             content_1M1 = html_and_command.content_1M1
             if startswith(lowercase(command), "julia>")
+                @log "julia" # DEBUG
                 julia_command = command[length("julia>")+1:end]
                 eval(Meta.parse(julia_command))
                 continue
             end
-            put!(inputs[:Browser].command_channel, """the following is the current html of the 'content_1M1' div from the browser and after it the command of the user. you thus use javascript to precisely manipulate the div:\ndiv with id='content_1M1':\n$(content_1M1)\nuser command:\n$command""")
+            @log "put!ing to browser" # DEBUG
+            html_and_command_string = """the following is the current html of the 'content_1M1' div from the browser and after it the command of the user. you thus use javascript to precisely manipulate the div:\ndiv with id='content_1M1':\n$(content_1M1)\nuser command:\n$command"""
+            put!(inputs[:Browser].command_channel, html_and_command_string)
+            @log "after put!ing to browser" # DEBUG
         end
-        @show "after command" # DEBUG
+        @log "after command" # DEBUG
     end
-    @show "after websocket" # DEBUG
+    @log "after websocket" # DEBUG
 end
