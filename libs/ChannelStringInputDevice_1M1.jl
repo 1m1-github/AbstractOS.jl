@@ -1,4 +1,4 @@
-@api const ChannelString_InputDevice = 
+@api const ChannelStringInputDeviceDescription = 
 """
 connects to a text input (via a keyboard or transcribed from a mic).
 `take!(device::ChannelStringInputDevice)::String` gives the input.
@@ -7,6 +7,11 @@ connects to a text input (via a keyboard or transcribed from a mic).
     command_channel::Channel{String}
 end
 import Base.take!
-@api take!(device::ChannelStringInputDevice)::String = take!(device.command_channel)
-describe(::ChannelStringInputDevice) = ChannelString_InputDevice
+@api take!(device::ChannelStringInputDevice)::String = begin
+    @debug 1 # DEBUG
+    x = take!(device.command_channel)
+    @debug x # DEBUG
+    x
+end
+describe(::ChannelStringInputDevice) = ChannelStringInputDeviceDescription
 ChannelStringInputDevice() = ChannelStringInputDevice(Channel{String}(0))

@@ -1,3 +1,5 @@
+# + restrict write area: running user
+
 const YOUR_PURPOSE = "you are an a computer operating system"
 
 abstract type IODevice end
@@ -14,7 +16,7 @@ outputs = Dict{Symbol, OutputDevice}()
 memory = Dict{Symbol, Any}()
 knowledge = Dict{Symbol, String}()
 tasks = Dict{Symbol, Task}()
-signals = Dict{Symbol, Bool}(:stop_run => false)
+signals = Dict{Symbol, Bool}(:stop_run => false, :next_running => false)
 errors = Exception[]
 
 macro api(args...) 
@@ -23,20 +25,21 @@ macro api(args...)
 end # used to denote parts of `knowledge` that are presented to the `intelligence` as abilities that can be considered black-boxes
 
 function learn(code_name::Symbol, code::String)
-    @show "learn", code_name # DEBUG
+    @debug code_name # DEBUG
     try
         clean_code = replace(code, "@api " => "")
+        @debug "got clean_code"
         code_expr = Meta.parse("begin $clean_code end")
-        @show "learn, code_expr" # DEBUG
+        @debug "code_expr" # DEBUG
         code_name ∈ keys(knowledge) && return
-        @show "learn, code_name ∉ keys(knowledge)" # DEBUG
+        @debug "code_name ∉ keys(knowledge)" # DEBUG
         code ∈ collect(values(knowledge)) && return
-        @show "learn, code ∉ collect(values(knowledge))" # DEBUG
+        @debug "code ∉ collect(values(knowledge))" # DEBUG
         eval(code_expr)
-        @show "learn, eval" # DEBUG
+        @debug "eval" # DEBUG
         knowledge[code_name] = code
         write("libs/$(code_name)_1M1.jl", code)
-        @show "learned $code_name"  # DEBUG
+        @debug "learned $code_name"  # DEBUG
     catch e
         show(e)
         throw(e)
@@ -45,61 +48,78 @@ end
 
 # todo @true mode = provable open source, always runs with safe==true
 
+num_tokens(s) = length(split(s, r"\s+"; keepempty=false))
+
 function listen(device::InputDevice)
-    @show "listen", device # DEBUG
+    @debug device # DEBUG
     while true
         output = take!(device)
+        @debug "output", length(output), num_tokens(output) # DEBUG
         memory[Symbol("$(typeof(device))/output")] = output
         isempty(output) && continue
-        @show output # DEBUG
+        @debug output # DEBUG
         @lock lock run(output)
     end
 end
 
+
 function run(device_output; files=[])
-    @show "run" # DEBUG
-    signals[:stop_run] && ( signals[:stop_run] = false ) && return
+    @debug "run", length(device_output), num_tokens(device_output) # DEBUG
+    global memory, signals, errors
+    signals[:stop_run] && ( @debug "signals[:stop_run] = false"; signals[:stop_run] = false ) && return
+    @debug signals, signals[:stop_run] # DEBUG
     clean(tasks)
-    @show "run cleaned tasks" # DEBUG
+    @debug "cleaned tasks", length(tasks) # DEBUG
     input = "$(describe())\n$device_output"
-    @show "run input" # DEBUG
-    write("log/input.jl", input) # DEBUG
-    global errors ; errors = Exception[]
-    signals[:next_running] = true
-    memory[:output] = julia_code = next(input, files=files) # `next` is implemented by the attached intelligence
-    # memory[:output] = julia_code = read("log/output.jl", String) # DEBUG
-    @show "run output" # DEBUG
-    signals[:next_running] = false
+    @debug "got input", length(input), num_tokens(input) # DEBUG
+    write(log_name("input"), input) # DEBUG
+    # input = read("log/input.jl", String) # DEBUG
+    errors = Exception[]
+    try
+        signals[:next_running] = true
+        memory[:output] = julia_code = next(input, files=files) # `next` is implemented by the attached intelligence
+        # memory[:output] = julia_code = read("log/output.jl", String) # DEBUG
+    catch e
+        @debug "next failed", e
+        return
+    finally
+        signals[:next_running] = false
+    end
+    @debug "got output", length(julia_code), num_tokens(julia_code) # DEBUG
     println(julia_code)
-    write("log/output.jl", julia_code) # DEBUG
-    run_task("begin $julia_code end")
+    write(log_name("output"), julia_code) # DEBUG
+    julia_code = "begin $julia_code end"
+    run_task(julia_code)
+    @debug "after run_task"
 end
 
 function run_task(julia_code::String)
-    @show "run_task", julia_code # DEBUG
+    @debug "run_task" # DEBUG
     task_name, task = run_code_inside_task(julia_code)
-    @show task_name, task # DEBUG
+    @debug task_name, task # DEBUG
     isnothing(task_name) && isnothing(task) && return 
     isnothing(task_name) && throw("need to set `task_name`")
+    global tasks
     tasks[task_name] = task
     Threads.@spawn wait_and_monitor_task_for_error(task)
 end
 
 function run_code_inside_task(julia_code::String)
-    @show "run_code_inside_task" # DEBUG
+    @debug "run_code_inside_task" # DEBUG
     try
         imports, body = separate(Meta.parse(julia_code))
-        @show "run_code_inside_task separate" # DEBUG
+        @debug "separate", safe  # DEBUG
         safe && !confirm() && return  # guaranteed to be settable by the user (via the REPL)
         eval(imports)
-        @show "run_code_inside_task eval" # DEBUG
+        @debug "eval" # DEBUG
         task = Threads.@spawn eval(body)
-        @show "run_code_inside_task task" # DEBUG
+        @debug "task" # DEBUG
         return taskname(body), task
     catch e
-        @show "run_code_inside_task error", e # DEBUG
+        @debug "error", e # DEBUG
+        global errors
         push!(errors, e)
-        run("there was an error, try again and never make the same mistake again.")
+        run("there was an error, try and never make the same mistake again.")
     end
 end
 
@@ -150,11 +170,14 @@ describe(a) = nothing
 
 function wait_and_monitor_task_for_error(task::Task)
     try wait(task) catch e 
-        @show "wait_and_monitor_task_for_error, error, $e, $(e.task.exception), "
+        @debug "wait_and_monitor_task_for_error, error, $e, $(e.task.exception), "
         bt = catch_backtrace()
-        limited_bt = bt[1:min(length(bt), 1000)] # todo magic #
-        Base.show_backtrace(stdout, limited_bt)
+        @debug length("$bt")
+        # limited_bt = bt[1:min(length(bt), 1000)] # todo magic # DEBUG
+        Base.show_backtrace(stdout, bt)
+        global errors
         push!(errors, e.task.exception)
+        @debug length(errors)
         run("there was an error, try again and never make the same mistake again, $e, $(e.task.exception).")
     end
 end
@@ -196,6 +219,7 @@ function taskname(code::Expr)
 end
 
 function clean(t::Dict{Symbol, Task})
+    global tasks
     name_and_tasks = map(s -> (s, t[s]), collect(keys(t)))
     done_name_and_tasks = filter(name_and_task -> istaskdone(name_and_task[2]), name_and_tasks)
     map(name_and_task -> delete!(tasks, name_and_task[1]), done_name_and_tasks)
@@ -204,5 +228,6 @@ end
 function confirm()
     print("run code Y/n")
     answer = lowercase(strip(readline()))
+    @debug answer
     isempty(answer) || answer == 'y'
 end

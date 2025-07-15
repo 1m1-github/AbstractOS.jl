@@ -1,7 +1,5 @@
-<div id="input">
-    <style>
-        #subtitles {
-            position: fixed;
+<div id="input_1M1">
+    <input type="text" id="subtitles_1M1" autocomplete="off" spellcheck="false" style="position: fixed;
             bottom: 50px;
             left: 50%;
             transform: translateX(-50%);
@@ -15,21 +13,20 @@
             min-height: 60px;
             border: 1px solid #ccc;
             outline: none;
-            width: 90%;
-        }
-    </style>
-    <input type="text" id="subtitles" autocomplete="off" spellcheck="false">
+            width: 90%;">
     <script>
-        let ws = new WebSocket('ws://$(ENV["ABSTRACTOS_HTTP_IP"]):$(ENV["ABSTRACTOS_WEBSOCKET_PORT"])');
-        ws.onopen = function (event) {
+        const websocket = new WebSocket('$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_PROTOCOL"])://$(ENV["ABSTRACTOS_OUTER_WEBSOCKET_IP"]):$(ENV["ABSTRACTOS_WEBSOCKET_PORT"])');
+        websocket.onopen = function (event) {
             console.log('WebSocket connected');
         };
-        ws.onmessage = function (event) {
+        websocket.onmessage = function (event) {
             console.log('WebSocket onmessage', event.data);
 
             const data = JSON.parse(event.data);
-            let contentDiv = document.getElementById('content');
-            contentDiv.innerHTML = data.div_content;
+            let contentDiv = document.getElementById('content_1M1');
+            if (data.content_1M1) {
+                contentDiv.innerHTML = data.content_1M1;
+            }
 
             const scripts = contentDiv.getElementsByTagName('script');
             for (const script of scripts) {
@@ -39,20 +36,33 @@
                 document.head.removeChild(newScript);
             }
 
-            // code for audio
+            // sendTask(data.audio_message);
+            // speechSynthesis.speak(new SpeechSynthesisUtterance(data.audio_message));
+
+            if (data.javascript) {
+                const newScript = document.createElement('script');
+                newScript.textContent = data.javascript;
+                document.head.appendChild(newScript);
+                document.head.removeChild(newScript);
+            }
         };
-        ws.onclose = function (event) {
+        websocket.onclose = function (event) {
             console.log('WebSocket closed');
         };
-        ws.onerror = function (error) {
+        websocket.onerror = function (error) {
             console.error('WebSocket error:', error);
         };
 
-        const subtitles = document.getElementById('subtitles');
+        const subtitles = document.getElementById('subtitles_1M1');
         subtitles.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                ws.send(subtitles.value);
+                const content_1M1 = document.getElementById('content_1M1').innerHTML;
+                const jsonString = JSON.stringify({
+                    content_1M1: content_1M1,
+                    command: subtitles.value
+                });
+                websocket.send(jsonString);
                 subtitles.value = '';
             }
         });

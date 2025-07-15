@@ -1,4 +1,9 @@
-@api const BrowserAudio_OutputDevice = """
+# learn(:BrowserOutputDevice, read("libs/BrowserOutputDevice_1M1.jl", String))
+@api struct BrowserHeyGenOutputDevice <: OutputDevice 
+    websockets::Vector{WebSocket}
+end
+
+@api const BrowserHeyGenOutputDeviceDescription = """
                                   connects to a browser. the browser gives you a graphic and an audio communication channel with the user.
                                   `put!(device::BrowserAudioOutputDevice, div_content::String, audio_message::String)` will overwrite the `innerHTML` of the `div` with `id` "content" and will have the browser speak `audio_message`. nothing besides this content div and potentially an avatar that speaks the audio, is visible to the user.
                                   the html/css/js that you `put!` to the browser can also run code back in the system (server) by sending Julia code via the websocket (`ws`).
@@ -9,18 +14,35 @@
                                   currently, you cannot see the log or errors in the browser, so try to keep browser code simple and you could use try catch to communicate errors in the (Julia) system to the browser.
                                   """
 
-using HTTP.WebSockets
-@api struct BrowserAudioOutputDevice <: OutputDevice
-    ws::WebSocket
-end
+# @api const BrowserHeyGenOutputDeviceDescription = 
+# """
+# `put!(device::BrowserHeyGenOutputDevice, javascript::String, audio_message::String)`
+# connects to a with a `BrowserOutputDevice` and has the HeyGen avatar speak `audio_message`.
+# """
 
 using JSON3
 import Base.put!
-@api function put!(device::BrowserAudioOutputDevice, div_content::String, audio_message::String)
+# @api function put!(device::BrowserHeyGenOutputDevice, javascript::String, audio_message::String)
+# @api function put!(device::BrowserHeyGenOutputDevice, div_content::String, audio_message::String)
+    # @debug "put! 1"
+    # javascript_with_audio_message = javascript * """\nsendTask("$(audio_message)")"""
+    # put!(device, javascript_with_audio_message)
+# end
+# previous_div_content=""
+@api function put!(device::BrowserHeyGenOutputDevice, div_content::String, audio_message::String)
+    global previous_div_content
+    previous_div_content = div_content
     msg = Dict(
         :div_content => div_content,
         :audio_message => audio_message,
     )
-    !WebSockets.isclosed(device.ws) && send(device.ws, JSON3.write(msg))
+    for (i, ws) in enumerate(device.websockets)
+        # WebSockets.isclosed(ws) && deleteat!(device.websockets, i) && continue
+        if WebSockets.isclosed(ws)
+            deleteat!(device.websockets, i)
+            continue
+        end
+        send(ws, JSON3.write(msg))
+    end
 end
-describe(::BrowserAudioOutputDevice) = BrowserAudio_OutputDevice
+describe(::BrowserHeyGenOutputDevice) = BrowserHeyGenOutputDeviceDescription
