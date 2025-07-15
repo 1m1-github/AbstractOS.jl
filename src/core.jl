@@ -62,7 +62,6 @@ function listen(device::InputDevice)
     end
 end
 
-
 function run(device_output; files=[])
     @debug "run", length(device_output), num_tokens(device_output) # DEBUG
     global memory, signals, errors
@@ -173,7 +172,6 @@ function wait_and_monitor_task_for_error(task::Task)
         @debug "wait_and_monitor_task_for_error, error, $e, $(e.task.exception), "
         bt = catch_backtrace()
         @debug length("$bt")
-        # limited_bt = bt[1:min(length(bt), 1000)] # todo magic # DEBUG
         Base.show_backtrace(stdout, bt)
         global errors
         push!(errors, e.task.exception)
