@@ -1,12 +1,16 @@
-# DEBUG
-include("libs/log.jl")
+const WORK_DIR = "/data"
 
-## core - required at the top
+## logging
+
+include("src/log.jl")
+
+## core
 
 const CORE_PATH = "src/core.jl"
 include(CORE_PATH)
 
 ## intelligence - exactly 1 should be used
+
 # learn(:Claude_next, read("libs/Claude_next_1M1.jl", String))
 learn(:XAI_next, read("libs/XAI_next_1M1.jl", String))
 

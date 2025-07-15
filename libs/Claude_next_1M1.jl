@@ -66,7 +66,7 @@ function claude_chat(message::String; files=[], model="claude-sonnet-4-20250514"
     ))
     
     try
-        # @log body # DEBUG
+        # @debug body # DEBUG
         response = HTTP.post(
             "https://api.anthropic.com/v1/messages",
             headers,

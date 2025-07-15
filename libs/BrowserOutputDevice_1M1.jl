@@ -19,10 +19,10 @@ end
 
 import Base.put!
 @api function put!(device::BrowserOutputDeviceAbstract, new_content_1M1::String, javascript::String)
-    # @log new_content_1M1, javascript # DEBUG
+    # @debug new_content_1M1, javascript # DEBUG
     if !isempty(new_content_1M1)
         global content_1M1
-        @log content_1M1 # DEBUG
+        @debug content_1M1 # DEBUG
         content_1M1 = new_content_1M1
     end
     msg = Dict(

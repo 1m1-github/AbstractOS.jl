@@ -2,18 +2,18 @@ using HTTP.WebSockets, JSON3
 
 # https://app.heygen.com
 # https://1m1.fly.dev
-# https://1m1.fly.dev?julia=@log memory
+# https://1m1.fly.dev?julia=@debug memory
 # https://1m1.fly.dev/yourcomputernumber
 # https://1m1.fly.dev/yourcomputernumber?julia=somejuliacode
 
 # set 
-# @log ENV["HEYGEN_API_KEY"]
-# @log ENV["ABSTRACTOS_HTTP_IP"]
-# @log ENV["ABSTRACTOS_HTTP_PORT"]
-# @log ENV["ABSTRACTOS_OUTER_WEBSOCKET_PROTOCOL"]
-# @log ENV["ABSTRACTOS_OUTER_WEBSOCKET_IP"]
-# @log ENV["ABSTRACTOS_INNER_WEBSOCKET_IP"]
-# @log ENV["ABSTRACTOS_WEBSOCKET_PORT"]
+# @debug ENV["HEYGEN_API_KEY"]
+# @debug ENV["ABSTRACTOS_HTTP_IP"]
+# @debug ENV["ABSTRACTOS_HTTP_PORT"]
+# @debug ENV["ABSTRACTOS_OUTER_WEBSOCKET_PROTOCOL"]
+# @debug ENV["ABSTRACTOS_OUTER_WEBSOCKET_IP"]
+# @debug ENV["ABSTRACTOS_INNER_WEBSOCKET_IP"]
+# @debug ENV["ABSTRACTOS_WEBSOCKET_PORT"]
 
 
 previous_div_content = ""

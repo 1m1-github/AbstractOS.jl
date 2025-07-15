@@ -8,7 +8,7 @@ function start_browser_signals()
         put!(outputs[:Browser], "", "document.getElementById('signals_1M1').innerHTML='$signals'")
     end
     catch e
-        @log "start_browser_signals", e
+        @debug "start_browser_signals", e
     end
 end
 tasks[:browser_signals] = @async start_browser_signals()

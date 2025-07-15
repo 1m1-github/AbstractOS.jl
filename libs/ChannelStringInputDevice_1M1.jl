@@ -8,9 +8,9 @@ connects to a text input (via a keyboard or transcribed from a mic).
 end
 import Base.take!
 @api take!(device::ChannelStringInputDevice)::String = begin
-    @log 1 # DEBUG
+    @debug 1 # DEBUG
     x = take!(device.command_channel)
-    @log x # DEBUG
+    @debug x # DEBUG
     x
 end
 describe(::ChannelStringInputDevice) = ChannelStringInputDeviceDescription
