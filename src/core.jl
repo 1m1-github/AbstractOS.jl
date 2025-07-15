@@ -65,7 +65,7 @@ end
 
 function run(device_output; files=[])
     @debug "run", length(device_output), num_tokens(device_output) # DEBUG
-    global memory, tasks, signals, errors
+    global memory, signals, errors
     signals[:stop_run] && ( @debug "signals[:stop_run] = false"; signals[:stop_run] = false ) && return
     @debug signals, signals[:stop_run] # DEBUG
     clean(tasks)
@@ -124,7 +124,6 @@ function run_code_inside_task(julia_code::String)
 end
 
 function describe()::String
-    global inputs, outputs, memory, knowledge, tasks, signals, errors
     join([
             "describe() BEGIN\n",
             "OS source code BEGIN:\n" * read(CORE_PATH, String) * "==\nOS source code END",
