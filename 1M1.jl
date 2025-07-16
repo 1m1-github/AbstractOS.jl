@@ -1,18 +1,21 @@
+@show "hi"
+write("/data/hi", "hi")
+
 const WORK_DIR = "/data"
 
 ## logging
 
-include("src/log.jl")
+include("/1M1/src/log.jl")
 
 ## core
 
-const CORE_PATH = "src/core.jl"
+const CORE_PATH = "/1M1/src/core.jl"
 include(CORE_PATH)
 
 ## intelligence - exactly 1 should be used
 
 # learn(:Claude_next, read("libs/Claude_next_1M1.jl", String))
-learn(:XAI_next, read("libs/XAI_next_1M1.jl", String))
+learn(:XAI_next, read("/data/libs/XAI_next_1M1.jl", String))
 
 ## @true - todo
 
