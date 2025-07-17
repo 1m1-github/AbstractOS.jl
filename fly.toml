@@ -9,34 +9,5 @@ primary_region = 'mia'
   source = "my_volume"
   destination = "/data"
 
-[[services]]
-  internal_port = 8080
-  protocol = "tcp"
-  
-  [[services.ports]]
-    force_https = true
-    handlers = ["http"]
-    port = 80
-    
-  [[services.ports]]
-    handlers = ["tls", "http"]
-    port = 443
-
-[[services]]
-  internal_port = 8081
-  protocol = "tcp"
-  
-  [[services.ports]]
-    handlers = ["tls"]
-    port = 8081
-
-[env]
-  ABSTRACTOS_HTTP_IP = "0.0.0.0"
-  ABSTRACTOS_HTTP_PORT = "8080"
-  ABSTRACTOS_OUTER_WEBSOCKET_PROTOCOL="wss"
-  ABSTRACTOS_OUTER_WEBSOCKET_IP="1m1.fly.dev"
-  ABSTRACTOS_INNER_WEBSOCKET_IP="0.0.0.0"
-  ABSTRACTOS_WEBSOCKET_PORT = "8081"
-  
 [[vm]]
   size = 'performance-4x'

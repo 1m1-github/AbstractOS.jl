@@ -38,7 +38,7 @@ function learn(code_name::Symbol, code::String)
         eval(code_expr)
         @debug "eval" # DEBUG
         knowledge[code_name] = code
-        write("libs/$(code_name)_1M1.jl", code)
+        write("knowledge/$(code_name)_1M1.jl", code)
         @debug "learned $code_name"  # DEBUG
     catch e
         show(e)
