@@ -1,5 +1,3 @@
-# + restrict write area: running user
-
 const YOUR_PURPOSE = "you are an a computer operating system"
 
 abstract type IODevice end
