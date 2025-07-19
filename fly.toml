@@ -1,4 +1,6 @@
 # fly deploy --ha=false
+# fly console --machine e825d01c0de178
+# fly logs
 
 app = '1m1'
 primary_region = 'mia'

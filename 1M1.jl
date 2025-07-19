@@ -1,4 +1,4 @@
-const WORK_DIR = "/data"
+const OS_ROOT_DIR = "/data"
 const OS_SRC_DIR = "/1M1/src"
 
 ## logging
@@ -9,10 +9,11 @@ include("$(OS_SRC_DIR)/log.jl")
 
 const CORE_PATH = "$(OS_SRC_DIR)/core.jl"
 include(CORE_PATH)
+learn(name::Symbol) = learn(name, read("$(OS_ROOT_DIR)/knowledge/$(name)_1M1.jl", String))
 
 ## intelligence - exactly 1 should be used
 
-learn(:XAI_next, read("$(WORK_DIR)/knowdledge/XAI_next_1M1.jl", String))
+learn(:XAI_next)
 
 ## @true - todo
 
@@ -20,10 +21,12 @@ learn(:XAI_next, read("$(WORK_DIR)/knowdledge/XAI_next_1M1.jl", String))
 
 ## knowledge
 
-learn(:Advice, read("knowdledge/Advice_1M1.jl", String))
-learn(:LearningAdvice, read("knowdledge/LearningAdvice_1M1.jl", String))
-learn(:FlyIO, read("knowdledge/Fly_io_1M1.jl", String))
-learn(:ReliableEngineering, read("knowdledge/ReliableEngineering_1M1.jl", String))
+map(learn, [
+    :Advice,
+    :LearningAdvice,
+    :FlyIO,
+    :ReliableEngineering,
+])
 
 [Threads.@spawn listen(inputs[device]) for device in keys(inputs)]
 

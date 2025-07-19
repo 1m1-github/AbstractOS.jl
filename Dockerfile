@@ -18,7 +18,7 @@ RUN chmod +x /docker_entrypoint.sh
 USER user-1m1
 CMD /docker_entrypoint.sh
 # CMD ["tail", "-f", "/dev/null"]
-# CMD ["sleep", "infinity"]
+
 # RUN julia -e 'using Pkg; Pkg.add(["Revise", "HTTP"]); using Revise, HTTP'
 
 # CMD pwd && whoami && ls && which julia
