@@ -61,6 +61,7 @@ function listen(device::InputDevice)
 end
 
 function run(device_output; files=[])
+    @show "run", length(device_output), num_tokens(device_output) # DEBUG
     @debug "run", length(device_output), num_tokens(device_output) # DEBUG
     global memory, signals, errors
     signals[:stop_run] && ( @debug "signals[:stop_run] = false"; signals[:stop_run] = false ) && return

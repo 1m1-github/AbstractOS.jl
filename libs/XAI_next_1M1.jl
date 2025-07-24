@@ -8,7 +8,7 @@ using HTTP, JSON, Base64
 
 @api MAX_OUTPUT_TOKENS = 10000
 
-function callXAIAPI(api_key::String, system_prompt::String, messages::Vector{Dict{String, Any}}; model::String="grok-4", max_tokens::Int)::String
+function callXAIAPI(api_key::String, messages::Vector{Dict{String, Any}}; model::String="grok-4", max_tokens::Int)::String
     url = "https://api.x.ai/v1/chat/completions"
 
     headers = [
@@ -59,5 +59,5 @@ end
     
     push!(messages, Dict("role" => "user", "content" => user_content))
     
-    callXAIAPI(ENV["X_AI_API_KEY"], YOUR_PURPOSE, messages; max_tokens=MAX_OUTPUT_TOKENS)
+    callXAIAPI(ENV["X_AI_API_KEY"], messages; max_tokens=MAX_OUTPUT_TOKENS)
 end

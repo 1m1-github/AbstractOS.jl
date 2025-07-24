@@ -1,5 +1,7 @@
-const OS_ROOT_DIR = "/data"
-const OS_SRC_DIR = "/1M1/src"
+# const OS_ROOT_DIR = "/data"
+const OS_ROOT_DIR = "/Users/1m1/"
+# const OS_SRC_DIR = "/1M1/src"
+const OS_SRC_DIR = "/Users/1m1/Documents/AbstractOS.jl/src"
 
 ## logging
 
@@ -24,7 +26,6 @@ learn(:XAI_next)
 map(learn, [
     :Advice,
     :LearningAdvice,
-    :FlyIO,
     :ReliableEngineering,
 ])
 
@@ -32,4 +33,4 @@ map(learn, [
 
 ## block
 
-wait(Condition())
+# wait(Condition())
