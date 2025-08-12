@@ -24,3 +24,6 @@ Run: `run("some_command")`
 # Knowledge
 
 Adding knowledge is what gives and retains ability to the sytem. The bare core has only the ability to learn (plus the abilities of the bare JVM)
+
+imi's knowledge is kept here:
+https://github.com/1m1-github/AbstractOS-Knowledge
