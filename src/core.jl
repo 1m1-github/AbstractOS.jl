@@ -10,7 +10,7 @@ input_devices = Dict{Symbol, InputDevice}() # name => device with take!(device::
 output_devices = Dict{Symbol, OutputDevice}() # name => device with put!::InputDevice, info...) implemented
 memory = Dict{Symbol, Any}() # ephemeral, name => anything
 knowledge = Dict{Symbol, String}() # persisted, name => code
-tasks = Dict{Symbol, Tuple{String, String, Task}}() # ephemeral, name => device_output, code_string, task
+tasks = Dict{Symbol, Tuple{String, String, Task}}() # ephemeral, name => input, output, task
 signals = Dict{Symbol, Bool}(:stop_run => false, :next_running => false) # can be used to communicate
 
 macro api(args...) 
