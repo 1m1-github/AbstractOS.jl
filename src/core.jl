@@ -87,7 +87,10 @@ function run(device_output)
     @info task_name # DEBUG
     code_imports, code_body = separate(code_expression)
     println(code_string)
-    safe && !confirm() && return # guaranteed to be settable by the user (via the REPL)
+    if safe && !confirm()
+        tasks[:latest_task] = (device_output, code_string, Task(0)) # to have to access to the suggested code
+        return # guaranteed to be settable by the user (via the REPL)
+    end
 
     run_task(device_output, task_name, code_string, code_imports, code_body)
     @info "run done" # DEBUG
