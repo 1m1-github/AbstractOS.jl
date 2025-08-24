@@ -1,3 +1,5 @@
+Work in progress ... nearly done
+
 # AbstractOS == InfoOS == JuliaOS == HumanOS == EngineerOS == MagicOS
 
 A computer operating system that can learn to do anything
