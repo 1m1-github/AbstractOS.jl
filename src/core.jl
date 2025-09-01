@@ -66,8 +66,7 @@ function run(device_output)
     code_string = ""
     signals[:next_running] = true
     try
-        memory[:latest_input] = device_output
-        memory[:latest_output] = code_string = next(system=describe(), user=device_output) # `next` is the attached intelligence (you), giving us the natural next output information from input information, and the output should be Julia code
+        code_string = next(system=describe(), user=device_output) # `next` is the attached intelligence (you), giving us the natural next output information from input information, and the output should be Julia code
         # memory[:latest_output] = code_string = read(joinpath(OS_ROOT_DIR, "logs", "output.jl"), String) # DEBUG
         @info code_string # DEBUG
         output_logfile = file_stream("output") # DEBUG
