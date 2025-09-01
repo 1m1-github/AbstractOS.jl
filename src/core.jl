@@ -18,7 +18,7 @@ knowledge = Dict{Symbol, String}() # persisted, name => code
 tasks = Dict{Symbol, TaskElement}() # ephemeral, name => input, output, task
 signals = Dict{Symbol, Bool}(:stop_run => false, :next_running => false) # can be used to communicate
 
-macro api(args...) 
+macro api(args...)
     isempty(args) && return nothing
     esc(args[end])
 end # used to denote parts of `knowledge` that are presented to the `intelligence` as abilities that can be considered black-boxes (can be a struct, type, function, variable)
@@ -66,8 +66,9 @@ function run(device_output)
     code_string = ""
     signals[:next_running] = true
     try
-        code_string = next(system=describe(), user=device_output) # `next` is the attached intelligence (you), giving us the natural next output information from input information, and the output should be Julia code
-        # code_string = read(joinpath(OS_ROOT_DIR, "logs", "output.jl"), String) # DEBUG
+        memory[:latest_input] = device_output
+        memory[:latest_output] = code_string = next(system=describe(), user=device_output) # `next` is the attached intelligence (you), giving us the natural next output information from input information, and the output should be Julia code
+        # memory[:latest_output] = code_string = read(joinpath(OS_ROOT_DIR, "logs", "output.jl"), String) # DEBUG
         @info code_string # DEBUG
         output_logfile = file_stream("output") # DEBUG
         write(output_logfile, code_string) # DEBUG
