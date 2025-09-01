@@ -19,7 +19,7 @@ learn(name::Symbol) = learn(name, read(joinpath(OS_KNOWLEDGE_DIR, "$name.jl"), S
 
 ## intelligence - needs to implement `next(;system::String, user::String)::String`
 
-@assert only(methods(next)) # exactly 1 intelligence should be used
+@assert length(methods(next)) == 1 # exactly 1 intelligence should be used
 
 ## @true - todo
 

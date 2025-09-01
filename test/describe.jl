@@ -132,6 +132,8 @@ code = """
        "f26 is good"
        @api const f26() = begin 26 end
 
+       @api f27(a;b,c::String="hi")::String = 27*c
+
        end
 """
 correct_description = [
@@ -169,131 +171,36 @@ correct_description = [
 "\"f24 is good\"\nf24(a::Int,b::Int,c::Int,d::Int,e::Int)::Int",
 "\"f25 is good\"\nf25(a,b...)::Int",
 "\"f26 is good\"\nconst f26()",
+"f27(a;b,c::String=\"hi\")::String",
 ]
 
 expr = Meta.parse(code)
-eval(expr)
 
 exprs = find_api_macrocalls(expr)
 
-for i in 1:length(exprs)
+for i in eachindex(exprs)
     e = exprs[i]
     # @show i, e
     # @show describe_api_macrocall(e)
-    @test correct_description[i] == describe_api_macrocall(e)
+    @test correct_description[i] == describe(e)
 end
 
-describe(code_name, knowledge[code_name])
-code_name=:BrowserOutput
-code=knowledge[code_name]
-code_expr = Meta.parse("begin $code end")
-api_code_exprs = find_api_macrocalls(code_expr)
-describe_api_macrocall(api_code_exprs[end])
-expression=api_code_exprs[end]
-describe(expression.args[3], docstring)
-expression=expression.args[3]
-describe(expression::Expr, docstring::Ref{String})
-expression=first_arg
-expression=args_without_first[1]
-expression.head
-expression.args
-expression.args[1]
-expression.args[2]
+# expression=exprs[35]
+# describe(expression)
 
+# expression=expression.args[end].args[1].args[1]
 
+# code = """
+#        begin
+#        "f1 is good"
+#        f1 = 1
 
+#        "f2 is good"
+#        @api f2 = 2
 
-Docs.meta(Main)
-binding = Docs.Binding(Main, :next)
-multi_doc = Docs.meta(Main)[binding]
-docs = multi_doc.docs
-collect(keys(docs))
-a = collect(keys(docs))[1]
-a.types
-a isa Tuple
-a <: Tuple
-a isa NTuple
-a isa NTuple{5,Int64}
-a <: NTuple
-a
-collect(keys(docs))[1] isa Vector
-collect(keys(docs))[1].types
-typeof(collect(keys(docs))[1].types)
-map(typeof, collect(keys(docs))[1].types)
-typeof(collect(keys(docs))[1])
-
-for (k, v) in Docs.meta(Main)
-    println(map(x -> x, collect(keys(v.docs))))
-end
-
-matching_docs_keys = filter(d -> d.types == signature_without_name, collect(keys(multi_doc)))
-matching_docs_keys = filter(d -> d.types == signature_without_name, (keys(multi_doc)))
-docstring = ""
-if !isempty(matching_docs_keys)
-    text_vec = docs[first(matching_docs_keys)].text
-    docstring = join(text_vec) * '\n'
-end
-
-name = "a=b is good"
-a1(x) = b1(x) = 1
-
-exprs = filter(e -> isa(e.args[3], Expr) && e.args[3].head == :(=), exprs)
-exprs = filter(e -> isa(e.args[3], Expr) && e.args[3].head == :function, exprs)
-exprs = filter(e -> isa(e.args[3], Expr) && e.args[3].head == :struct, exprs)
-exprs = filter(e -> isa(e.args[3], Expr) && e.args[3].head == :abstract, exprs)
-exprs = filter(e -> isa(e.args[3], Expr) && e.args[3].head == :primitive, exprs)
-
-for i in 1:length(exprs)
-    e = exprs[i]
-    @show i, string(e.args[3].head)
-end
-for i in 1:length(exprs)
-    e = exprs[i]
-    @show i, string(e.args[3].args)
-end
-for i in 1:length(exprs)
-    e = exprs[i]
-    @show i, length(e.args[3].args)
-end
-for i in 1:length(exprs)
-    e = exprs[i]
-    @show i, string(e.args[3])
-end
-
-i = 29
-@show exprs[i]
-exprs[i].head
-exprs[i].args
-exprs[i].args[1]
-exprs[i].args[3]
-string(exprs[i].args[3])
-typeof(exprs[i].args[3])
-isa(eval(exprs[i].args[3]), Function)
-exprs[i].args[3].head
-exprs[i].args[3].args
-typeof(exprs[i].args[3].args[1])
-typeof(exprs[i].args[3].args[2])
-j = 1
-exprs[i].args[3].args[j].head
-exprs[i].args[3].args[j].args
-k = 1
-typeof(exprs[i].args[3].args[j].args[k])
-exprs[i].args[3].args[j].args[k]
-exprs[i].args[3].args[j].args[k].head
-exprs[i].args[3].args[j].args[k].args
-l = 1
-exprs[i].args[3].args[j].args[k].args[l]
-exprs[i].args[3].args[j].args[k].args[l].head
-exprs[i].args[3].args[j].args[k].args[l].args
-
-
-m = methods(f10)[1]
-m.source
-Base.uncompressed_ast(m).code
-
-expression = exprs[i].args[3]
-expression = exprs[i].args[3].args[j].args[k]
-
-docstring = Ref("")
-typeof(expression)
-description = describe(expression, docstring)
+#        f3 = 3
+#        end
+# """
+# expr = Meta.parse(code)
+# exprs = find_api_macrocalls(expr)
+# describe(exprs[1])

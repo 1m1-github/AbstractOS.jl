@@ -4,13 +4,18 @@ abstract type IODevice end
 abstract type InputDevice <: IODevice end # e.g. microphone, keyboard, camera, touch, ...
 abstract type OutputDevice <: IODevice end # e.g. speaker, screen, AR, VR, touch, ...
 
+struct TaskElement
+    input::String
+    output::String
+    task::Task
+end
 safe = false # true requires confirmation from user before executing code
 lock = ReentrantLock() # enforces single thread on main intelligence
 input_devices = Dict{Symbol, InputDevice}() # name => device with take!(device::InputDevice)::Any implemented
 output_devices = Dict{Symbol, OutputDevice}() # name => device with put!::InputDevice, info...) implemented
 memory = Dict{Symbol, Any}() # ephemeral, name => anything
 knowledge = Dict{Symbol, String}() # persisted, name => code
-tasks = Dict{Symbol, Tuple{String, String, Task}}() # ephemeral, name => input, output, task
+tasks = Dict{Symbol, TaskElement}() # ephemeral, name => input, output, task
 signals = Dict{Symbol, Bool}(:stop_run => false, :next_running => false) # can be used to communicate
 
 macro api(args...) 
@@ -19,7 +24,7 @@ macro api(args...)
 end # used to denote parts of `knowledge` that are presented to the `intelligence` as abilities that can be considered black-boxes (can be a struct, type, function, variable)
 
 global OS_ROOT_DIR, OS_SRC_DIR, OS_KNOWLEDGE_DIR # only persist to OS_ROOT_DIR
-include(joinpath(OS_SRC_DIR, "describe.jl")) # `describe`s the state of the system, anything following `@api` is printed including its docstring
+include("describe.jl") # contains `describe` for various types
 
 function learn(code_name::Symbol, code::String)
     @info "learn", code_name # DEBUG
@@ -64,7 +69,9 @@ function run(device_output)
         code_string = next(system=describe(), user=device_output) # `next` is the attached intelligence (you), giving us the natural next output information from input information, and the output should be Julia code
         # code_string = read(joinpath(OS_ROOT_DIR, "logs", "output.jl"), String) # DEBUG
         @info code_string # DEBUG
-        write(joinpath(OS_ROOT_DIR, "logs", "output.jl"), code_string) # DEBUG
+        output_logfile = file_stream("output") # DEBUG
+        write(output_logfile, code_string) # DEBUG
+        close(output_logfile) # DEBUG
     catch e
         @error "`next` failed", e
         return
@@ -88,7 +95,7 @@ function run(device_output)
     code_imports, code_body = separate(code_expression)
     println(code_string)
     if safe && !confirm()
-        tasks[:latest_task] = (device_output, code_string, Task(0)) # to have to access to the suggested code
+        tasks[:latest_task] = TaskElement(device_output, code_string, Task(0)) # to have to access to the suggested code
         return # guaranteed to be settable by the user (via the REPL)
     end
 
@@ -99,7 +106,7 @@ function run_task(device_output::String, task_name::Symbol, code_string::String,
     @info "run_task", device_output, task_name # DEBUG
     global tasks
     tasks[:latest_task] = tasks[task_name] = 
-    (device_output, code_string, 
+    TaskElement(device_output, code_string, 
     Threads.@spawn try
         eval(code_imports)
         eval(code_body)
@@ -108,7 +115,7 @@ function run_task(device_output::String, task_name::Symbol, code_string::String,
         e isa InterruptException && return
         return run(join([
             "`tasks[:$task_name]` failed with Exception: $(e.task.exception)",
-            previous_input_output(tasks[task_name][1], tasks[task_name][2])...,
+            previous_input_output(tasks[task_name].input, tasks[task_name].output)...,
             "Fix or restart it if appropriate"
         ], '\n'))
     end)
