@@ -54,7 +54,7 @@ function listen(device::InputDevice)
         @lock lock run(output)
     end
 end
-
+# NUM_RUNS=1 # DEBUG
 function run(device_output)
     @info "run", device_output # DEBUG
     global signals
@@ -67,7 +67,19 @@ function run(device_output)
     signals[:next_running] = true
     try
         code_string = next(system=describe(), user=device_output) # `next` is the attached intelligence (you), giving us the natural next output information from input information, and the output should be Julia code
-        # memory[:latest_output] = code_string = read(joinpath(OS_ROOT_DIR, "logs", "output.jl"), String) # DEBUG
+        #  # DEBUG
+        # if NUM_RUNS==1
+        # code_string = read(joinpath(OS_ROOT_DIR, "logs", "log-1756794878-output.jl"), String) # DEBUG
+        # elseif NUM_RUNS==2
+        # code_string = read(joinpath(OS_ROOT_DIR, "logs", "log-1756794909-output.jl"), String) # DEBUG
+        # elseif NUM_RUNS==3
+        # code_string = read(joinpath(OS_ROOT_DIR, "logs", "log-1756795123-output.jl"), String) # DEBUG
+        # else
+        # code_string = next(system=describe(), user=device_output) # `next` is the attached intelligence (you), giving us the natural next output information from input information, and the output should be Julia code
+        # end
+        # global NUM_RUNS
+        # NUM_RUNS += 1
+        #  # DEBUG
         @info code_string # DEBUG
         output_logfile = file_stream("output.jl") # DEBUG
         write(output_logfile, code_string) # DEBUG
@@ -102,8 +114,9 @@ function run(device_output)
     @info "run done" # DEBUG
 end
 function run_task(device_output::String, task_name::Symbol, code_string::String, code_imports::Expr, code_body::Expr)
-    @info "run_task", device_output, task_name # DEBUG
+    @info "run_task", task_name # DEBUG
     global tasks
+    code_body = add_latest_task_closure(code_body)
     tasks[:latest_task] = tasks[task_name] = 
     TaskElement(device_output, code_string, 
     Threads.@spawn try
@@ -125,6 +138,18 @@ function run()
     # wait(Condition())
 end
 previous_input_output(in, out) = ["The `device_output` was: $in", "Your output code was: $out"]
+
+add_latest_task_closure(ex) = ex
+function add_latest_task_closure(ex::Expr)
+    if ex.head == :(=) && isa(ex.args[1], Expr) && ex.args[1].head == :ref && ex.args[1].args[1] == :tasks && ex.args[1].args[2] == QuoteNode(:latest_task)
+        throw("write to `tasks[:latest_task]` not allowed for closure")
+    end
+    new_args = [add_latest_task_closure(a) for a in ex.args] 
+    if ex.head == :ref && length(ex.args) == 2 && ex.args[1] == :tasks && ex.args[2] == QuoteNode(:latest_task)
+        return tasks[:latest_task]
+    end
+    Expr(ex.head, new_args...)
+end
 
 function separate(code::Expr)::Tuple{Expr, Expr}
     imports = Expr(:block)
