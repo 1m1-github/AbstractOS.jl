@@ -14,8 +14,8 @@ Logging.handle_message(logger::Logger, level, message, _module, group, id, file,
     Logging.handle_message(logger.file_logger, level, message, _module, group, id, file, line; kwargs...)
 end
 
-const file_stream(x) = open(joinpath(OS_ROOT_DIR, "logs", "log-$x-$(round(Int, time()))"), "a")
-const file_logger = SimpleLogger(file_stream("aos"), Logging.Info)
+const file_stream(x) = open(joinpath(OS_ROOT_DIR, "logs", "log-$(round(Int, time()))-$x"), "a")
+const file_logger = SimpleLogger(file_stream("aos.txt"), Logging.Info)
 const console_logger = ConsoleLogger(stdout, Logging.Info)
 const logger = Logger(console_logger, file_logger)
 global_logger(logger)

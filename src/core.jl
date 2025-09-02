@@ -69,7 +69,7 @@ function run(device_output)
         code_string = next(system=describe(), user=device_output) # `next` is the attached intelligence (you), giving us the natural next output information from input information, and the output should be Julia code
         # memory[:latest_output] = code_string = read(joinpath(OS_ROOT_DIR, "logs", "output.jl"), String) # DEBUG
         @info code_string # DEBUG
-        output_logfile = file_stream("output") # DEBUG
+        output_logfile = file_stream("output.jl") # DEBUG
         write(output_logfile, code_string) # DEBUG
         close(output_logfile) # DEBUG
     catch e
@@ -81,7 +81,7 @@ function run(device_output)
 
     code_expression, task_name = nothing, nothing
     try
-        code_expression = Meta.parse("begin $code_string end")
+        code_expression = Meta.parse(join(["begin", code_string, "end"], '\n'))
         task_name = taskname(code_expression)
     catch e
         @error "`Meta.parse` or `taskname` failed", e # DEBUG
@@ -93,7 +93,6 @@ function run(device_output)
     end
     @info task_name # DEBUG
     code_imports, code_body = separate(code_expression)
-    println(code_string)
     if safe && !confirm()
         tasks[:latest_task] = TaskElement(device_output, code_string, Task(0)) # to have to access to the suggested code
         return # guaranteed to be settable by the user (via the REPL)
