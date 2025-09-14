@@ -69,7 +69,7 @@ function run(device_output)
         code_string = next(system=describe(), user=device_output) # `next` is the attached intelligence (you), giving us the natural next output information from input information, and the output should be Julia code
         #  # DEBUG
         # if NUM_RUNS==1
-        # code_string = read(joinpath(OS_ROOT_DIR, "logs", "log-1756794878-output.jl"), String) # DEBUG
+        # code_string = read(joinpath(OS_ROOT_DIR, "logs", "log-1757879356-output.jl"), String) # DEBUG
         # elseif NUM_RUNS==2
         # code_string = read(joinpath(OS_ROOT_DIR, "logs", "log-1756794909-output.jl"), String) # DEBUG
         # elseif NUM_RUNS==3
@@ -125,10 +125,12 @@ function run_task(device_output::String, task_name::Symbol, code_string::String,
     catch e
         @error "run_task", e # DEBUG
         e isa InterruptException && return
+        @info tasks[task_name].input # DEBUG
+        @info "after tasks[task_name].input" # DEBUG
         return run(join([
-            "`tasks[:$task_name]` failed with Exception: $(e.task.exception)",
+            "`tasks[:$task_name]` failed with Exception: $(hasfield(typeof(e), :task) ? e.task.exception : e)",
             previous_input_output(tasks[task_name].input, tasks[task_name].output)...,
-            "Fix or restart it if appropriate"
+            "Fix or restart it if appropriate",
         ], '\n'))
     end)
 end
