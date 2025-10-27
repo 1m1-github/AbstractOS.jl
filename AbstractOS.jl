@@ -1,6 +1,6 @@
 ## params
 
-const OS_ROOT_DIR = joinpath("/", "Users", "aos")
+const OS_ROOT_DIR = joinpath("/", "Users", "1m1")
 const OS_SRC_DIR = joinpath(OS_ROOT_DIR, "src")
 const OS_KNOWLEDGE_DIR = joinpath(OS_ROOT_DIR, "knowledge")
 
@@ -17,9 +17,8 @@ safe = true
 
 learn(name::Symbol) = learn(name, read(joinpath(OS_KNOWLEDGE_DIR, "$name.jl"), String))
 
-## intelligence - needs to implement `next(;system::String, user::String)::String`
-
-@assert length(methods(next)) == 1 # exactly 1 intelligence should be used
+## intelligence - needs to implement `next(who, what_system, what_user, complexity)::String`
+# @assert length(methods(next)) == 1 # exactly 1 intelligence should be used - todo
 
 ## @true - todo
 
@@ -27,6 +26,6 @@ learn(name::Symbol) = learn(name, read(joinpath(OS_KNOWLEDGE_DIR, "$name.jl"), S
 
 map(learn, [])
 
-## run at the end
+## next at the end
 
-run()
+next()

@@ -11,12 +11,12 @@ struct TaskElement
 end
 safe = false # true requires confirmation from user before executing code
 lock = ReentrantLock() # enforces single thread on main intelligence
-input_devices = Dict{Symbol, InputDevice}() # name => device with take!(device::InputDevice)::Any implemented
-output_devices = Dict{Symbol, OutputDevice}() # name => device with put!::InputDevice, info...) implemented
-memory = Dict{Symbol, Any}() # ephemeral, name => anything
-knowledge = Dict{Symbol, String}() # persisted, name => code
-tasks = Dict{Symbol, TaskElement}() # ephemeral, name => input, output, task
-signals = Dict{Symbol, Bool}(:stop_run => false, :next_running => false) # can be used to communicate
+input_devices = Dict{Symbol,InputDevice}() # name => device with take!(device::InputDevice)::Any implemented
+output_devices = Dict{Symbol,OutputDevice}() # name => device with put!::InputDevice, info...) implemented
+memory = Dict{Symbol,Any}() # ephemeral, name => anything # todo just use new vars added to jvm
+knowledge = Dict{Symbol,String}() # persisted, name => code
+tasks = Dict{Symbol,TaskElement}() # ephemeral, name => input, output, task
+signals = Dict{Symbol,Bool}(:stop_run => false, :next_running => false) # can be used to communicate
 
 macro api(args...)
     isempty(args) && return nothing
@@ -51,35 +51,27 @@ function listen(device::InputDevice)
     while true
         output = take!(device)
         isempty(output) && continue
-        @lock lock run(output)
+        @lock lock run(device, output)
     end
 end
-# NUM_RUNS=1 # DEBUG
-function run(device_output)
-    @info "run", device_output # DEBUG
+
+"`who` can be used to track call chains to next"
+next(who, what) = next(who, what, 0.5)
+function next(who, what, complexity)
+    @info "next", who, what, complexity # DEBUG
     global signals
     if signals[:stop_run]
-        @info "run signals[:stop_run]" # DEBUG
+        @info "next signals[:stop_run]" # DEBUG
         signals[:stop_run] = false
         return
     end
     code_string = ""
     signals[:next_running] = true
     try
-        code_string = next(system=describe(), user=device_output) # `next` is the attached intelligence (you), giving us the natural next output information from input information, and the output should be Julia code
-        #  # DEBUG
-        # if NUM_RUNS==1
-        # code_string = read(joinpath(OS_ROOT_DIR, "logs", "log-1757879356-output.jl"), String) # DEBUG
-        # elseif NUM_RUNS==2
-        # code_string = read(joinpath(OS_ROOT_DIR, "logs", "log-1756794909-output.jl"), String) # DEBUG
-        # elseif NUM_RUNS==3
-        # code_string = read(joinpath(OS_ROOT_DIR, "logs", "log-1756795123-output.jl"), String) # DEBUG
-        # else
-        # code_string = next(system=describe(), user=device_output) # `next` is the attached intelligence (you), giving us the natural next output information from input information, and the output should be Julia code
-        # end
-        # global NUM_RUNS
-        # NUM_RUNS += 1
-        #  # DEBUG
+        system_state = describe()
+        isa(who, IODevice) && (system_state *= "\nThis is direct input from the user, first will run at lower complexity, use it for planning\n")
+        code_string = next(who, system_state, what, complexity) # `next` is the attached intelligence (you), giving us the natural next output information from input information, and the output should be Julia code
+
         @info code_string # DEBUG
         output_logfile = file_stream("output.jl") # DEBUG
         write(output_logfile, code_string) # DEBUG
@@ -97,63 +89,63 @@ function run(device_output)
         task_name = taskname(code_expression)
     catch e
         @error "`Meta.parse` or `taskname` failed", e # DEBUG
-        return run(join([
-            "Your code failed with Exception: $e",
-            previous_input_output(device_output, code_string)...,
-            "Fix and retry without making the same mistake again",
-            ], '\n'))
+        return next(who * "_parseortasknameerrorrerun", join([
+                    "Your code failed with Exception: $e",
+                    previous_input_output(what, code_string)...,
+                    "Fix and retry without making the same mistake again",
+                ], '\n'), complexity)
     end
     @info task_name # DEBUG
     code_imports, code_body = separate(code_expression)
     if safe && !confirm()
-        tasks[:latest_task] = TaskElement(device_output, code_string, Task(0)) # to have to access to the suggested code
-        return # guaranteed to be settable by the user (via the REPL)
+        tasks[:latest_task] = TaskElement(what, code_string, Task(0)) # to have to access to the suggested code
+        return # 'safe' guaranteed to be settable by the user (via the REPL)
     end
 
-    run_task(device_output, task_name, code_string, code_imports, code_body)
-    @info "run done" # DEBUG
+    run_task(who, what, complexity, task_name, code_string, code_imports, code_body)
+    @info "next done" # DEBUG
 end
-function run_task(device_output::String, task_name::Symbol, code_string::String, code_imports::Expr, code_body::Expr)
-    @info "run_task", task_name # DEBUG
+function run_task(who, what, complexity, task_name::Symbol, code_string::String, code_imports::Expr, code_body::Expr)
+    @info "run_task", who, what, complexity, task_name # DEBUG
     global tasks
     code_body = add_latest_task_closure(code_body)
-    tasks[:latest_task] = tasks[task_name] = 
-    TaskElement(device_output, code_string, 
-    Threads.@spawn try
-        eval(code_imports)
-        eval(code_body)
-    catch e
-        @error "run_task", e # DEBUG
-        e isa InterruptException && return
-        @info tasks[task_name].input # DEBUG
-        @info "after tasks[task_name].input" # DEBUG
-        return run(join([
-            "`tasks[:$task_name]` failed with Exception: $(hasfield(typeof(e), :task) ? e.task.exception : e)",
-            previous_input_output(tasks[task_name].input, tasks[task_name].output)...,
-            "Fix or restart it if appropriate",
-        ], '\n'))
-    end)
+    tasks[:latest_task] = tasks[task_name] =
+        TaskElement(what, code_string,
+            Threads.@spawn try
+                eval(code_imports)
+                eval(code_body)
+            catch e
+                @error "run_task", e # DEBUG
+                e isa InterruptException && return
+                @info tasks[task_name].input # DEBUG
+                @info "after tasks[task_name].input" # DEBUG
+                return next(who * "_evalcodeerrorrerun", join([
+                            "`tasks[:$task_name]` failed with Exception: $(hasfield(typeof(e), :task) ? e.task.exception : e)",
+                            previous_input_output(tasks[task_name].input, tasks[task_name].output)...,
+                            "Fix or restart it if appropriate",
+                        ], '\n'), complexity)
+            end)
 end
-function run()
-    [Threads.@spawn listen(input_devices[device]) for device in keys(input_devices)]
+function next()
+    # [Threads.@spawn listen(input_devices[device]) for device in keys(input_devices)]
     # block ~ depends where the system is run from
     # wait(Condition())
 end
-previous_input_output(in, out) = ["The `device_output` was: $in", "Your output code was: $out"]
+previous_input_output(in, out) = ["The `input` was: $in", "Your output code was: $out"]
 
 add_latest_task_closure(ex) = ex
 function add_latest_task_closure(ex::Expr)
     if ex.head == :(=) && isa(ex.args[1], Expr) && ex.args[1].head == :ref && ex.args[1].args[1] == :tasks && ex.args[1].args[2] == QuoteNode(:latest_task)
         throw("write to `tasks[:latest_task]` not allowed for closure")
     end
-    new_args = [add_latest_task_closure(a) for a in ex.args] 
+    new_args = [add_latest_task_closure(a) for a in ex.args]
     if ex.head == :ref && length(ex.args) == 2 && ex.args[1] == :tasks && ex.args[2] == QuoteNode(:latest_task)
         return tasks[:latest_task]
     end
     Expr(ex.head, new_args...)
 end
 
-function separate(code::Expr)::Tuple{Expr, Expr}
+function separate(code::Expr)::Tuple{Expr,Expr}
     imports = Expr(:block)
     cleaned = Expr(code.head)
     for arg in code.args
@@ -163,7 +155,7 @@ function separate(code::Expr)::Tuple{Expr, Expr}
             elseif arg.head == :macrocall
                 push!(cleaned.args, arg)
             else
-                sub_imports, sub_cleaned  = separate(arg)
+                sub_imports, sub_cleaned = separate(arg)
                 append!(imports.args, sub_imports.args)
                 push!(cleaned.args, sub_cleaned)
             end
@@ -185,7 +177,7 @@ function _taskname(code::Expr)
         return code.args[2].value
     end
     code.head ≠ :block && return nothing
-    only(filter(!isnothing, _taskname.(code.args)))    
+    only(filter(!isnothing, _taskname.(code.args)))
 end
 
 function confirm()
