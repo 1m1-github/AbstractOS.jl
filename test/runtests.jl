@@ -1,7 +1,7 @@
 include("describe.jl")
 
-run("""create some knowledge that adds a pulling mechanism to any html. so given html, add html (js) that will refresh the page (do the GET that brought this page) every n seconds""")
-run("""write a function that adds a pulling mechanism to any html. so given html, add html (js) that will refresh the page (do the GET that brought this page) every n seconds""")
+next("""create some knowledge that adds a pulling mechanism to any html. so given html, add html (js) that will refresh the page (do the GET that brought this page) every n seconds""")
+next("""write a function that adds a pulling mechanism to any html. so given html, add html (js) that will refresh the page (do the GET that brought this page) every n seconds""")
 
 code_string=read(joinpath(OS_ROOT_DIR, "logs", "log-1756783872-output.jl"), String)
 

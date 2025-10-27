@@ -17,7 +17,7 @@ and `include(AbstractOS.jl)` inside the JVM
 
 REPL/terminal gives access backend to the virtual machine 
 
-Run: `run("some_command")`
+Run: `next("some_command")`
 
 # Core
 

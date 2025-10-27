@@ -16,7 +16,7 @@ output_devices = Dict{Symbol,OutputDevice}() # name => device with put!::InputDe
 memory = Dict{Symbol,Any}() # ephemeral, name => anything # todo just use new vars added to jvm
 knowledge = Dict{Symbol,String}() # persisted, name => code
 tasks = Dict{Symbol,TaskElement}() # ephemeral, name => input, output, task
-signals = Dict{Symbol,Bool}(:stop_run => false, :next_running => false) # can be used to communicate
+signals = Dict{Symbol,Bool}(:stop_next => false, :next_running => false) # can be used to communicate
 
 macro api(args...)
     isempty(args) && return nothing
@@ -51,18 +51,17 @@ function listen(device::InputDevice)
     while true
         output = take!(device)
         isempty(output) && continue
-        @lock lock run(device, output)
+        @lock lock next(device, output)
     end
 end
 
 "`who` can be used to track call chains to next"
-next(who, what) = next(who, what, 0.5)
 function next(who, what, complexity)
     @info "next", who, what, complexity # DEBUG
     global signals
-    if signals[:stop_run]
-        @info "next signals[:stop_run]" # DEBUG
-        signals[:stop_run] = false
+    if signals[:stop_next]
+        @info "next signals[:stop_next]" # DEBUG
+        signals[:stop_next] = false
         return
     end
     code_string = ""
@@ -105,6 +104,14 @@ function next(who, what, complexity)
     run_task(who, what, complexity, task_name, code_string, code_imports, code_body)
     @info "next done" # DEBUG
 end
+next(who, what) = next(who, what, 0.5)
+next(what) = next("user", what, 1.0)
+function next()
+    [Threads.@spawn listen(input_devices[device]) for device in keys(input_devices)]
+    # block ~ depends where the system is run from
+    # wait(Condition())
+end
+
 function run_task(who, what, complexity, task_name::Symbol, code_string::String, code_imports::Expr, code_body::Expr)
     @info "run_task", who, what, complexity, task_name # DEBUG
     global tasks
@@ -125,11 +132,6 @@ function run_task(who, what, complexity, task_name::Symbol, code_string::String,
                             "Fix or restart it if appropriate",
                         ], '\n'), complexity)
             end)
-end
-function next()
-    # [Threads.@spawn listen(input_devices[device]) for device in keys(input_devices)]
-    # block ~ depends where the system is run from
-    # wait(Condition())
 end
 previous_input_output(in, out) = ["The `input` was: $in", "Your output code was: $out"]
 
