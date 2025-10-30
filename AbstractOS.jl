@@ -11,14 +11,14 @@ include(joinpath(OS_SRC_DIR, "log.jl"))
 ## core
 
 include(joinpath(OS_SRC_DIR, "core.jl"))
-safe = true
+# safe = true
 
 ## utils
 
 learn(name::Symbol) = learn(name, read(joinpath(OS_KNOWLEDGE_DIR, "$name.jl"), String))
 
-## intelligence - needs to implement `next(who, what_system, what_user, complexity)::String`
-# @assert length(methods(next)) == 1 # exactly 1 intelligence should be used - todo
+## intelligence - needs to implement `intelligence(who, what_system, what_user, complexity)::String`
+# @assert length(methods(intelligence)) == 1 # exactly 1 intelligence should be used - todo
 
 ## @true - todo
 

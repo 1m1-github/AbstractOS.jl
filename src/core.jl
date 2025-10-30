@@ -5,6 +5,7 @@ abstract type InputDevice <: IODevice end # e.g. microphone, keyboard, camera, t
 abstract type OutputDevice <: IODevice end # e.g. speaker, screen, AR, VR, touch, ...
 
 struct TaskElement
+    # todo maybe add `who::String`
     input::String
     output::String
     task::Task
@@ -16,7 +17,7 @@ output_devices = Dict{Symbol,OutputDevice}() # name => device with put!::InputDe
 memory = Dict{Symbol,Any}() # ephemeral, name => anything # todo just use new vars added to jvm
 knowledge = Dict{Symbol,String}() # persisted, name => code
 tasks = Dict{Symbol,TaskElement}() # ephemeral, name => input, output, task
-signals = Dict{Symbol,Bool}(:stop_next => false, :next_running => false) # can be used to communicate
+signals = Dict{Symbol,Bool}(:stop_next => false, :intelligence_running => false) # can be used to communicate
 
 macro api(args...)
     isempty(args) && return nothing
@@ -55,9 +56,8 @@ function listen(device::InputDevice)
     end
 end
 
-"`who` can be used to track call chains to next"
-function next(who, what, complexity)
-    @info "next", who, what, complexity # DEBUG
+function next(who, what_system, what_user, complexity)
+    @info "next", who, what_system, what_user, complexity # DEBUG
     global signals
     if signals[:stop_next]
         @info "next signals[:stop_next]" # DEBUG
@@ -65,75 +65,90 @@ function next(who, what, complexity)
         return
     end
     code_string = ""
-    signals[:next_running] = true
+    signals[:intelligence_running] = true
     try
-        system_state = describe()
+        system_state = describe() * "\n" * what_system
+        @info "got system_state", length(who * system_state * what_user) # DEBUG
         isa(who, IODevice) && (system_state *= "\nThis is direct input from the user, first will run at lower complexity, use it for planning\n")
-        code_string = next(who, system_state, what, complexity) # `next` is the attached intelligence (you), giving us the natural next output information from input information, and the output should be Julia code
 
-        @info code_string # DEBUG
+        input_logfile = file_stream("input.jl") # DEBUG
+        write(input_logfile, "$who\n$system_state\n$what_user") # DEBUG
+        close(input_logfile) # DEBUG
+
+        code_string = intelligence(who, system_state, what_user, complexity) # `next` is the attached intelligence (you), giving us the natural next output information from input information, and the output should be Julia code
+        
+        @info "code_string", code_string # DEBUG
         output_logfile = file_stream("output.jl") # DEBUG
         write(output_logfile, code_string) # DEBUG
         close(output_logfile) # DEBUG
     catch e
-        @error "`next` failed", e
+        @error "`intelligence` failed", e
         return
     finally
-        signals[:next_running] = false
+        signals[:intelligence_running] = false
     end
 
     code_expression, task_name = nothing, nothing
     try
         code_expression = Meta.parse(join(["begin", code_string, "end"], '\n'))
+        @info "got code_expression" # DEBUG
         task_name = taskname(code_expression)
+        @info "got task_name", task_name # DEBUG
     catch e
         @error "`Meta.parse` or `taskname` failed", e # DEBUG
-        return next(who * "_parseortasknameerrorrerun", join([
-                    "Your code failed with Exception: $e",
-                    previous_input_output(what, code_string)...,
-                    "Fix and retry without making the same mistake again",
-                ], '\n'), complexity)
+        who *= "_parseortasknameerrorrerun"
+        what_system = join([
+            "Your code failed with Exception: $e",
+            previous_input_output(what_user, code_string)...,
+        ])
+        what_user = "Fix and retry without making the same mistake again"
+        return next(who, what_system, what_user, complexity)
     end
-    @info task_name # DEBUG
+
     code_imports, code_body = separate(code_expression)
+    @info "got separate" # DEBUG
     if safe && !confirm()
-        tasks[:latest_task] = TaskElement(what, code_string, Task(0)) # to have to access to the suggested code
+        @info "safe && !confirm()" # DEBUG
+        tasks[:latest_task] = TaskElement(what_user, code_string, Task(0)) # to have to access to the suggested code
         return # 'safe' guaranteed to be settable by the user (via the REPL)
     end
 
-    run_task(who, what, complexity, task_name, code_string, code_imports, code_body)
+    run_task(who, what_user, complexity, task_name, code_string, code_imports, code_body)
     @info "next done" # DEBUG
 end
-next(who, what) = next(who, what, 0.5)
-next(what) = next("user", what, 1.0)
+next(who, what_user, complexity) = next(who, "", what_user, complexity)
+next(who, what_user) = next(who, what_user, 0.5)
+next(what_user) = next("user", what_user, 1.0)
 function next()
     [Threads.@spawn listen(input_devices[device]) for device in keys(input_devices)]
     # block ~ depends where the system is run from
     # wait(Condition())
 end
 
-function run_task(who, what, complexity, task_name::Symbol, code_string::String, code_imports::Expr, code_body::Expr)
-    @info "run_task", who, what, complexity, task_name # DEBUG
+function run_task(who, what_user, complexity, task_name::Symbol, code_string::String, code_imports::Expr, code_body::Expr)
+    @info "run_task", who, what_user, complexity, task_name # DEBUG
     global tasks
     code_body = add_latest_task_closure(code_body)
+    @info "got add_latest_task_closure" # DEBUG
     tasks[:latest_task] = tasks[task_name] =
-        TaskElement(what, code_string,
+        TaskElement(what_user, code_string,
             Threads.@spawn try
                 eval(code_imports)
+                @info "got eval(code_imports)" # DEBUG
                 eval(code_body)
             catch e
                 @error "run_task", e # DEBUG
                 e isa InterruptException && return
-                @info tasks[task_name].input # DEBUG
-                @info "after tasks[task_name].input" # DEBUG
-                return next(who * "_evalcodeerrorrerun", join([
-                            "`tasks[:$task_name]` failed with Exception: $(hasfield(typeof(e), :task) ? e.task.exception : e)",
-                            previous_input_output(tasks[task_name].input, tasks[task_name].output)...,
-                            "Fix or restart it if appropriate",
-                        ], '\n'), complexity)
+                e_string = Base.invokelatest(string, hasfield(typeof(e), :task) ? e.task.exception : e)
+                who *= "_evalcodeerrorrerun"
+                what_system = join([
+                    "`tasks[:$task_name]` failed with Exception: $e_string",
+                    previous_input_output(tasks[task_name].input, tasks[task_name].output)...,])
+                what_user = "Fix or restart it if appropriate"
+                return next(who, what_system, what_user, complexity)
             end)
 end
-previous_input_output(in, out) = ["The `input` was: $in", "Your output code was: $out"]
+previous_input_output(in, out) = ["The `input` was\n$in", "Your output code was\n$out"]
 
 add_latest_task_closure(ex) = ex
 function add_latest_task_closure(ex::Expr)
