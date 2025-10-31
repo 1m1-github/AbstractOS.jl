@@ -16,7 +16,7 @@ input_devices = Dict{Symbol,InputDevice}() # name => device with take!(device::I
 output_devices = Dict{Symbol,OutputDevice}() # name => device with put!::InputDevice, info...) implemented
 memory = Dict{Symbol,Any}() # ephemeral, name => anything # todo just use new vars added to jvm
 knowledge = Dict{Symbol,String}() # persisted, name => code
-tasks = Dict{Symbol,TaskElement}() # ephemeral, name => input, output, task
+tasks = Dict{Symbol,TaskElement}(:latest_task => TaskElement("", "", Task(0))) # ephemeral, name => input, output, task
 signals = Dict{Symbol,Bool}(:stop_next => false, :intelligence_running => false) # can be used to communicate
 
 macro api(args...)
