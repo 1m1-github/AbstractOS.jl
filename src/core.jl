@@ -76,7 +76,7 @@ function next(who, what_system, what_user, complexity)
         close(input_logfile) # DEBUG
 
         code_string = intelligence(who, system_state, what_user, complexity) # `next` is the attached intelligence (you), giving us the natural next output information from input information, and the output should be Julia code
-        
+
         @info "code_string", code_string # DEBUG
         output_logfile = file_stream("output.jl") # DEBUG
         write(output_logfile, code_string) # DEBUG
@@ -122,7 +122,7 @@ next(what_user) = next("user", what_user, 1.0)
 function next()
     [Threads.@spawn listen(input_devices[device]) for device in keys(input_devices)]
     # block ~ depends where the system is run from
-    # wait(Condition())
+    wait(Condition())
 end
 
 function run_task(who, what_user, complexity, task_name::Symbol, code_string::String, code_imports::Expr, code_body::Expr)

@@ -52,6 +52,8 @@ function describe(expression::Expr)
     if expression.head in [:curly, :string, :abstract, :primitive]
         # todo `where` for :curly
         description = string(expression)
+    elseif expression.head == :.
+        description = describe(first_arg) * "." * describe(expression.args[2])
     elseif expression.head == :macro
         description = "@" * describe(first_arg)
     elseif expression.head == :(...)
@@ -102,5 +104,6 @@ function describe(expression::Expr)
     end
     description
 end
-describe(x) = string(x)
 describe(x::String) = "\"" * x * "\""
+describe(x::QuoteNode) = describe(x.value)
+describe(x) = string(x)
