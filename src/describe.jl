@@ -7,14 +7,14 @@ function describe(state::State)::String
             "describe() END",
         ], "\n")
 end
-describe(input_devices::Dict{Symbol, InputDevice}) = describe("input_devices", input_devices)
-describe(output_devices::Dict{Symbol, OutputDevice}) = describe("output_devices", output_devices)
-describe(tasks::Dict{Symbol, TaskElement}) = "tasks BEGIN\n" * join(map(name -> describe(tasks[name]), collect(keys(tasks))), '\n') * "\ntasks END"
-describe(memory::Dict{Symbol, Any}) = "memory BEGIN\n" * join(map(name -> ":$name=>$(memory[name])", collect(keys(memory))), '\n') * "\nmemory END"
-describe(knowledge::Dict{Symbol, String}) = "knowledge BEGIN\n" * join(map(code_name -> describe(code_name, knowledge[code_name]), collect(keys(knowledge))), '\n') * "\nknowledge END"
-describe(signals::Dict{Symbol, Bool}) = "signals BEGIN\n" * join(map(name -> ":$name=>$(signals[name])", collect(keys(signals))), ',') * "\nsignals END"
+describe(input_devices::Dict{Symbol,InputDevice}) = describe("input_devices", input_devices)
+describe(output_devices::Dict{Symbol,OutputDevice}) = describe("output_devices", output_devices)
+describe(tasks::Dict{Symbol,TaskElement}) = "tasks BEGIN\n" * join(map(name -> describe(tasks[name]), collect(keys(tasks))), '\n') * "\ntasks END"
+describe(memory::Dict{Symbol,Any}) = "memory BEGIN\n" * join(map(name -> ":$name=>$(memory[name])", collect(keys(memory))), '\n') * "\nmemory END"
+describe(knowledge::Dict{Symbol,String}) = "knowledge BEGIN\n" * join(map(code_name -> describe(code_name, knowledge[code_name]), collect(keys(knowledge))), '\n') * "\nknowledge END"
+describe(signals::Dict{Symbol,Bool}) = "signals BEGIN\n" * join(map(name -> ":$name=>$(signals[name])", collect(keys(signals))), ',') * "\nsignals END"
 
-describe(name::String, d::Dict{Symbol, T}) where T = "$name BEGIN\n" * join(map(k -> ":$k", collect(keys(d))), ',') * "\n$name END"
+describe(name::String, d::Dict{Symbol,T}) where T = "$name BEGIN\n" * join(map(k -> ":$k", collect(keys(d))), ',') * "\n$name END"
 describe(task::TaskElement) = ":$(task.task_name)(istaskstarted:$(istaskstarted(task.task)),istaskdone:$(istaskdone(task.task)),istaskfailed:$(istaskfailed(task.task)))"
 function describe(code_name::Symbol, code::String)
     result = "knowledge[:$code_name] BEGIN"
@@ -24,12 +24,12 @@ function describe(code_name::Symbol, code::String)
     push!(result, "knowledge[:$code_name] END")
     join(result, '\n')
 end
-docstring_macroname = GlobalRef(Core, Symbol("@doc"))
-is_api_macrocall(expression::Expr) = 
-    expression.head == :macrocall && 
-    (expression.args[1] == Symbol("@api") || 
-     (expression.args[1] == docstring_macroname && 
-      expression.args[end].head == :macrocall && 
+is_docstring_macrocall(x) = x == GlobalRef(Core, Symbol("@doc")) || x == Expr(:., :Core, QuoteNode(Symbol("@doc")))
+is_api_macrocall(expression::Expr) =
+    expression.head == :macrocall &&
+    (expression.args[1] == Symbol("@api") ||
+     (is_docstring_macrocall(expression.args[1]) &&
+      expression.args[end].head == :macrocall &&
       expression.args[end].args[1] == Symbol("@api")))
 find_api_macrocalls(::Any) = Expr[]
 function find_api_macrocalls(expression::Expr)
@@ -60,11 +60,13 @@ function describe(expression::Expr)
         if !isa(second_arg, Expr) || second_arg.head ≠ :block
             description *= "=" * describe(second_arg)
         end
+    elseif expression.head == :$
+        description = describe(eval(first_arg))
     elseif expression.head == :(::)
-        1 < length(expression.args) && ( description = describe(first_arg))
+        1 < length(expression.args) && (description = describe(first_arg))
         description *= "::" * describe(expression.args[end])
     elseif expression.head == :(<:)
-        1 < length(expression.args) && ( description = describe(first_arg))
+        1 < length(expression.args) && (description = describe(first_arg))
         description *= "<:" * describe(expression.args[end])
     elseif expression.head == :(...)
         description = describe(first_arg) * "..."
@@ -90,10 +92,12 @@ function describe(expression::Expr)
         params_description = join(map(describe, params), ',')
         description = string(first_arg) * "(" * params_description
         named_params_description = isempty(named_params) ? "" : describe(only(named_params))
-        if !isempty(named_params_description) description *= ";" * named_params_description end
+        if !isempty(named_params_description)
+            description *= ";" * named_params_description
+        end
         description *= ")"
     elseif expression.head == :macrocall
-        if first_arg == docstring_macroname
+        if is_docstring_macrocall(first_arg)
             docstring = expression.args[3] # todo is 3 always correct?
             description = describe(docstring) * "\n"
         end

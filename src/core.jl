@@ -50,8 +50,7 @@ include("describe.jl") # contains `describe` for various types
 function learn(state::State, code_name::Symbol, code::String)
     @info "learn", code_name # DEBUG
     try
-        clean_code = replace(code, "@api " => "")
-        code_expr = Meta.parse("begin $clean_code end")
+        code_expr = Meta.parse("begin $code end")
         code_name ∈ keys(state.knowledge) && return
         code ∈ collect(values(state.knowledge)) && return
         describe.(find_api_macrocalls(code_expr)) # code should be describable
