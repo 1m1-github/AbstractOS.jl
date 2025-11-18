@@ -53,8 +53,8 @@ function learn(state::State, code_name::Symbol, code::String)
         code_expr = Meta.parse("begin $code end")
         code_name ∈ keys(state.knowledge) && return
         code ∈ collect(values(state.knowledge)) && return
-        describe.(find_api_macrocalls(code_expr)) # code should be describable
         eval(code_expr)
+        describe.(find_api_macrocalls(code_expr)) # code should be describable
         state.knowledge[code_name] = code
         write(joinpath(OS_KNOWLEDGE_DIR, "$code_name.jl"), code)
     catch e
