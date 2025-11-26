@@ -71,6 +71,12 @@ function describe(expression::Expr)
         description *= "<:" * describe(expression.args[end])
     elseif expression.head == :(...)
         description = describe(first_arg) * "..."
+    elseif expression.head == :ref # todo not tested yet, written by grok4.1
+        description = describe(first_arg)
+        if 1 < length(expression.args)
+            indices = join(describe.(expression.args[2:end]), ',')
+            description *= "[$(indices)]"
+        end
     elseif expression.head == :macro
         description = "@" * describe(first_arg)
     elseif expression.head == :const

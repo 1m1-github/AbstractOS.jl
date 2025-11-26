@@ -48,7 +48,7 @@ global OS_ROOT_DIR, OS_SRC_DIR, OS_KNOWLEDGE_DIR # only persist to OS_ROOT_DIR
 include("describe.jl") # contains `describe` for various types
 
 function learn(state::State, code_name::Symbol, code::String)
-    @info "learn", code_name # DEBUG
+    @info "learn", state.state_id, code_name # DEBUG
     try
         code_expr = Meta.parse("begin $code end")
         code_name ∈ keys(state.knowledge) && return
@@ -66,27 +66,27 @@ end
 # todo @true mode = provable open source, always runs with safe==true
 
 function listen(state::State, device::InputDevice)
-    @info "listen", typeof(device) # DEBUG
+    @info "listen", state.state_id, typeof(device) # DEBUG
     while true
-        @info "waiting to take!", typeof(device) # DEBUG
+        @info "waiting to take!", state.state_id, typeof(device) # DEBUG
         output = take!(device)
-        @info "listen output", output # DEBUG
+        @info "listen output", state.state_id, output # DEBUG
         isempty(output) && continue
         @lock state.lock next(state, device, output)
     end
 end
 
 function next(state::State, who, what_system, what_user, complexity)
-    @info "next", who, what_system, what_user, complexity # DEBUG
+    @info "next", state.state_id, who, what_system, what_user, complexity # DEBUG
     if state.signals[:stop_next]
-        @info "next signals[:stop_next]" # DEBUG
+        @info "next signals[:stop_next]", state.state_id # DEBUG
         state.signals[:stop_next] = false
         return
     end
     code_string = ""
     state.signals[:intelligence_running] = true
     system_state = describe(state) * "\n" * what_system
-    @info "got system_state", length(string(who) * system_state * what_user) # DEBUG
+    @info "got system_state", state.state_id, length(string(who) * system_state * what_user) # DEBUG
     isa(who, IODevice) && (system_state *= "\nThis is direct input from the user, first will run at lower complexity, use it for planning\n")
 
     input_logfile = file_stream("input.jl") # DEBUG
@@ -95,15 +95,15 @@ function next(state::State, who, what_system, what_user, complexity)
 
     try
         code_string = intelligence(who, system_state, what_user, complexity) # `next` is the attached intelligence (you), giving us the natural next output information from input information, and the output should be Julia code
-        # code_string = read("/Users/1m1/logs/log-1763417198-output.jl", String) # DEBUG
+        # code_string = read("/Users/1m1/logs/log-1763499513-output.jl", String) # DEBUG
     catch e
-        @error "`intelligence` failed", e
+        @error "`intelligence` failed", state.state_id, e
         return
     finally
         state.signals[:intelligence_running] = false
     end
 
-    @info "code_string", code_string # DEBUG
+    @info "code_string", state.state_id, code_string # DEBUG
     output_logfile = file_stream("output.jl") # DEBUG
     write(output_logfile, code_string) # DEBUG
     close(output_logfile) # DEBUG
@@ -111,11 +111,11 @@ function next(state::State, who, what_system, what_user, complexity)
     code_expression, task_name = nothing, nothing
     try
         code_expression = Meta.parse(join(["begin", code_string, "end"], '\n'))
-        @info "got code_expression", code_expression # DEBUG
+        @info "got code_expression", state.state_id, code_expression # DEBUG
         task_name = taskname(code_expression)
-        @info "got task_name", task_name # DEBUG
+        @info "got task_name", state.state_id, task_name # DEBUG
     catch e
-        @error "`Meta.parse` or `taskname` failed", e # DEBUG
+        @error "`Meta.parse` or `taskname` failed", state.state_id, e # DEBUG
         who = string(who) * "_parseortasknameerrorrerun"
         what_system = join([
             "Your code failed with Exception: $e",
@@ -126,21 +126,22 @@ function next(state::State, who, what_system, what_user, complexity)
     end
 
     code_imports, code_body = separate(code_expression)
-    @info "got code_imports", code_imports # DEBUG
-    @info "got code_body", code_body # DEBUG
+    @info "got code_imports", state.state_id, code_imports # DEBUG
+    @info "got code_body", state.state_id, code_body # DEBUG
     if state.safe && !confirm()
-        @info "safe && !confirm()" # DEBUG
+        @info "safe && !confirm()", state.state_id # DEBUG
         state.tasks[:latest_task] = TaskElement(:latest_task, what_user, code_string, Task(() -> nothing)) # to have to access to the suggested code
         return # 'safe' guaranteed to be settable by the user (via the REPL)
     end
 
     run_task(state, who, what_user, complexity, task_name, code_string, code_imports, code_body)
-    @info "next done" # DEBUG
+    @info "next done", state.state_id # DEBUG
 end
 next(state::State, who, what_user, complexity) = next(state, who, "", what_user, complexity)
 next(state::State, who, what_user) = next(state, who, what_user, 0.5)
 next(state::State, what_user) = next(state, "user", what_user, 1.0)
 function next(state::State, w::Bool=true)
+    # todo important rm old listen threads first
     [Threads.@spawn listen(state, device) for (_, device) in state.input_devices]
     # block ~ depends where the system is run from
     if w
@@ -149,19 +150,19 @@ function next(state::State, w::Bool=true)
 end
 
 function run_task(state::State, who, what_user::String, complexity, task_name::Symbol, code_string::String, code_imports::Expr, code_body::Expr)
-    @info "run_task", who, what_user, complexity, task_name # DEBUG
+    @info "run_task", state.state_id, who, what_user, complexity, task_name # DEBUG
     code_body = add_latest_task_closure(state, code_body)
-    @info "got add_latest_task_closure", code_body # DEBUG
+    @info "got add_latest_task_closure", state.state_id, code_body # DEBUG
     inject_state!(state, code_body)
-    @info "did inject_state!", code_body # DEBUG
+    @info "did inject_state!", state.state_id, code_body # DEBUG
     state.tasks[:latest_task] = state.tasks[task_name] =
         TaskElement(task_name, what_user, code_string,
             Threads.@spawn try
                 eval(code_imports)
-                @info "got eval(code_imports)" # DEBUG
+                @info "got eval(code_imports)", state.state_id # DEBUG
                 eval(code_body)
             catch e
-                @error "run_task", e # DEBUG
+                @error "run_task", state.state_id, e # DEBUG
                 e isa InterruptException && return
                 e_string = Base.invokelatest(string, hasfield(typeof(e), :task) ? e.task.exception : e)
                 who = string(who) * "_evalcodeerrorrerun"
@@ -186,26 +187,18 @@ function add_latest_task_closure(state::State, ex::Expr)
     Expr(ex.head, new_args...)
 end
 
-"this function allows you to use state fields such as `state_id`, `memory`, etc. without qualification as the correct state is injected (not `state.state_id`, just `state_id`; not `state.memory`, just `memory`; etc.)"
 function inject_state!(state::State, code::Expr)
-    # @info "inject_state!"
-    # @info field
     for (i, arg) in pairs(code.args)
-        # @info (i, arg)
         if arg isa Expr
-            # @info "arg isa Expr"
             inject_state!(state, arg)
         elseif arg isa QuoteNode
-            # @info "arg isa QuoteNode"
             if arg.value isa Expr
-                # @info "arg isa QuoteNode and arg.value isa Expr"
                 inject_state!(state, arg)
             elseif arg.value in fieldnames(State)
-                # @info "arg isa QuoteNode and arg.value == field"
+
                 arg = QuoteNode(Expr(:., Expr(:ref, :STATES, state.state_id), QuoteNode(arg.value)))
             end
         elseif arg in fieldnames(State)
-            # @info "arg == field"
             code.args[i] = Expr(:., Expr(:ref, :STATES, state.state_id), QuoteNode(arg))
         end
     end
