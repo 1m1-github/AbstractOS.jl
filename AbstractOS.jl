@@ -26,6 +26,6 @@ learn(name::Symbol) = learn(name, read(joinpath(OS_KNOWLEDGE_DIR, "$name.jl"), S
 
 map(learn, [])
 
-## next at the end
+## REPL goes last
 
-next()
+include(joinpath(OS_ROOT_DIR, "src", "repl.jl"))

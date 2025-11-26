@@ -3,6 +3,8 @@ const YOUR_PURPOSE = "you are an a learning and truthful computer operating syst
 abstract type IODevice end
 abstract type InputDevice <: IODevice end # e.g. microphone, keyboard, camera, touch, ...
 abstract type OutputDevice <: IODevice end # e.g. speaker, screen, AR, VR, touch, ...
+import Base.take! # ∃ take!(::InputDevice, ...)
+import Base.put! # ∃ put!(::OutputDevice, ...)
 
 struct TaskElement
     # todo maybe add `who`
