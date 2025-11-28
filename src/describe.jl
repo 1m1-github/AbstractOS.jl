@@ -1,27 +1,30 @@
-describe() = describe(only(values(STATES)))
-function describe(state::State)::String
-    join([
-            "describe() BEGIN",
-            "OS source code BEGIN\n" * read(joinpath(OS_SRC_DIR, "core.jl"), String) * "\nOS source code END",
-            map(describe, [state.input_devices, state.output_devices, state.memory, state.knowledge, state.tasks, state.signals])...,
-            "describe() END",
-        ], "\n")
-end
-describe(input_devices::Dict{Symbol,InputDevice}) = describe("input_devices", input_devices)
-describe(output_devices::Dict{Symbol,OutputDevice}) = describe("output_devices", output_devices)
-describe(tasks::Dict{Symbol,TaskElement}) = "tasks BEGIN\n" * join(map(name -> describe(tasks[name]), collect(keys(tasks))), '\n') * "\ntasks END"
-describe(memory::Dict{Symbol,Any}) = "memory BEGIN\n" * join(map(name -> ":$name=>$(memory[name])", collect(keys(memory))), '\n') * "\nmemory END"
-describe(knowledge::Dict{Symbol,String}) = "knowledge BEGIN\n" * join(map(code_name -> describe(code_name, knowledge[code_name]), collect(keys(knowledge))), '\n') * "\nknowledge END"
-describe(signals::Dict{Symbol,Bool}) = "signals BEGIN\n" * join(map(name -> ":$name=>$(signals[name])", collect(keys(signals))), ',') * "\nsignals END"
+describe() = join([
+    "describe() BEGIN",
+    "OS source code BEGIN\n" * read(joinpath(OS_SRC_DIR, "core.jl"), String) * "\nOS source code END",
+    describe(INPUT_DEVICES),
+    describe(OUTPUT_DEVICES),
+    describe(MEMORY),
+    describe(KNOWLEDGE),
+    describe(TASKS),
+    describe(SIGNALS),
+    "describe() END",
+], "\n")
+
+describe(input_devices::Dict{Symbol,InputDevice}) = describe("INPUT_DEVICES", input_devices)
+describe(output_devices::Dict{Symbol,OutputDevice}) = describe("OUTPUT_DEVICES", output_devices)
+describe(tasks::Dict{Symbol,TaskElement}) = "TASKS BEGIN\n" * join(map(name -> describe(tasks[name]), collect(keys(tasks))), '\n') * "\nTASKS END"
+describe(memory::Dict{Symbol,Any}) = "MEMORY BEGIN\n" * join(map(name -> ":$name=>$(memory[name])", collect(keys(memory))), '\n') * "\nMEMORY END"
+describe(knowledge::Dict{Symbol,String}) = "KNOWLEDGE BEGIN\n" * join(map(code_name -> describe(code_name, knowledge[code_name]), collect(keys(knowledge))), '\n') * "\nKNOWLEDGE END"
+describe(signals::Dict{Symbol,Bool}) = "SIGNALS BEGIN\n" * join(map(name -> ":$name=>$(signals[name])", collect(keys(signals))), ',') * "\nSIGNALS END"
 
 describe(name::String, d::Dict{Symbol,T}) where T = "$name BEGIN\n" * join(map(k -> ":$k", collect(keys(d))), ',') * "\n$name END"
 describe(task::TaskElement) = ":$(task.task_name)(istaskstarted:$(istaskstarted(task.task)),istaskdone:$(istaskdone(task.task)),istaskfailed:$(istaskfailed(task.task)))"
 function describe(code_name::Symbol, code::String)
-    result = "knowledge[:$code_name] BEGIN"
+    result = "KNOWLEDGE[:$code_name] BEGIN"
     code_expr = Meta.parse("begin $code end")
     api_code_exprs = find_api_macrocalls(code_expr)
     result = [result, describe.(api_code_exprs)...]
-    push!(result, "knowledge[:$code_name] END")
+    push!(result, "KNOWLEDGE[:$code_name] END")
     join(result, '\n')
 end
 is_docstring_macrocall(x) = x == GlobalRef(Core, Symbol("@doc")) || x == Expr(:., :Core, QuoteNode(Symbol("@doc")))
