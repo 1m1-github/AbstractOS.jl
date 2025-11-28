@@ -1,3 +1,6 @@
+# todo
+# add `yield()` to all loops
+
 const YOUR_PURPOSE = "you are an a learning and truthful computer operating system"
 
 abstract type IODevice end
@@ -70,6 +73,7 @@ end
 function listen(state::State, device::InputDevice)
     @info "listen", state.state_id, typeof(device) # DEBUG
     while true
+        yield()
         @info "waiting to take!", state.state_id, typeof(device) # DEBUG
         output = take!(device)
         @info "listen output", state.state_id, output # DEBUG
@@ -96,6 +100,7 @@ function next(state::State, who, what_system, what_user, complexity)
     close(input_logfile) # DEBUG
 
     try
+        # todo @async to get REPl
         code_string = intelligence(who, system_state, what_user, complexity) # `next` is the attached intelligence (you), giving us the natural next output information from input information, and the output should be Julia code
         # code_string = read("/Users/1m1/logs/log-1763499513-output.jl", String) # DEBUG
     catch e
@@ -144,7 +149,9 @@ next(state::State, who, what_user) = next(state, who, what_user, 0.5)
 next(state::State, what_user) = next(state, "user", what_user, 1.0)
 function next(state::State, w::Bool=true)
     # todo important rm old listen threads first
-    [Threads.@spawn listen(state, device) for (_, device) in state.input_devices]
+    # @show state.input_devices # DEBUG
+    devices_to_listen = filter(kv -> kv[1] != :REPL, state.input_devices)
+    [Threads.@spawn listen(state, device) for (_, device) in devices_to_listen]
     # block ~ depends where the system is run from
     if w
         wait(Condition())
