@@ -1,7 +1,4 @@
-# todo
-# add `yield()` to all loops
-
-const YOUR_PURPOSE = "you are an a learning and truthful computer operating system"
+const YOUR_PURPOSE = "you operate a learning and truthful computer operating system called AOS (AbstractOS)"
 
 abstract type IODevice end
 abstract type InputDevice <: IODevice end # e.g. microphone, keyboard, camera, touch, ...
@@ -17,6 +14,7 @@ struct TaskElement
     task::Task
 end
 
+# const FORCED_AGENCY = Ref(false)
 const SAFE = Ref(false)
 const LOCK = ReentrantLock()
 const INPUT_DEVICES = Dict{Symbol,InputDevice}()
@@ -63,28 +61,46 @@ function listen(device::InputDevice)
         @lock LOCK next(device, output)
     end
 end
+function listen(w::Bool=true)
+    # todo important rm old listen threads first
+    # @show INPUT_DEVICES # DEBUG
+    devices_to_listen = filter(kv -> kv[1] != :REPL, INPUT_DEVICES)
+    [Threads.@spawn listen(device) for (_, device) in devices_to_listen]
+    # block ~ depends where the system is run from
+    if w
+        wait(Condition())
+    end
+end
+
+function check_signals()
+    if SIGNALS[:stop_next]
+        @info "next SIGNALS[:stop_next]" # DEBUG
+        return SIGNALS[:stop_next] = false
+    end
+    SIGNALS[:intelligence_running] && return false
+    return SIGNALS[:intelligence_running] = true
+end
 
 function next(who, what_system, what_user, complexity)
     @info "next", who, what_system, what_user, complexity # DEBUG
-    if SIGNALS[:stop_next]
-        @info "next SIGNALS[:stop_next]" # DEBUG
-        SIGNALS[:stop_next] = false
-        return
-    end
-    code_string = ""
-    SIGNALS[:intelligence_running] = true
+    !check_signals() && return
+
     system_state = describe() * "\n" * what_system
     @info "got system_state", length(string(who) * system_state * what_user) # DEBUG
-    isa(who, IODevice) && (system_state *= "\nThis is direct input from the user, first will run at lower complexity, use it for planning\n")
+    # isa(who, IODevice) && (system_state *= "\nThis is direct input from the user, first will run at lower complexity, use it for planning\n")
 
     input_logfile = file_stream("input.jl") # DEBUG
     write(input_logfile, "$who\n$system_state\n$what_user") # DEBUG
     close(input_logfile) # DEBUG
-
+    
+    code_string = ""
     try
         # todo @async to get REPl
         code_string = intelligence(who, system_state, what_user, complexity) # `next` is the attached intelligence (you), giving us the natural next output information from input information, and the output should be Julia code
-        # code_string = read("/Users/1m1/logs/log-1764313293-output.jl", String) # DEBUG
+        # code_string = read("/Users/1m1/logs/log-1764389100-output.jl", String) # DEBUG
+        # who="user" # DEBUG
+        # what_user="""give me a list (api) of abilities you want to have to be a useful system. you can name each function as you want or expect. these are abilities that you reuse often, given that you have access to a stateful julia vm including internet access.""" # DEBUG
+        # complexity=0.5 # DEBUG
     catch e
         @error "`intelligence` failed", e
         return
@@ -97,23 +113,18 @@ function next(who, what_system, what_user, complexity)
     write(output_logfile, code_string) # DEBUG
     close(output_logfile) # DEBUG
 
-    code_expression, task_name = nothing, nothing
+    code_expression = nothing
     try
         code_expression = Meta.parse(join(["begin", code_string, "end"], '\n'))
-        code_expression.head && throw(code_expression.args[1])
+        code_expression.head == :incomplete && throw(code_expression.args[1])
         @info "got code_expression", code_expression # DEBUG
+    catch e return retry_on_error("`Meta.parse`: $e", "$(who)_parseerrorrerun", what_user, code_string, complexity) end
+    
+    task_name = nothing
+    try
         task_name = taskname(code_expression)
         @info "got task_name", task_name # DEBUG
-    catch e
-        @error "`Meta.parse` or `taskname` failed", e # DEBUG
-        who = string(who) * "_parseortasknameerrorrerun"
-        what_system = join([
-            "Your code failed with Exception: $e",
-            previous_input_output(what_user, code_string)...,
-        ])
-        what_user = "Fix and retry without making the same mistake again"
-        return next(who, what_system, what_user, complexity)
-    end
+    catch e return retry_on_error("`taskname` failed: $e", "$(who)_tasknameerrorrerun", what_user, code_string, complexity) end
 
     code_imports, code_body = separate(code_expression)
     @info "got code_imports", code_imports # DEBUG
@@ -125,20 +136,23 @@ function next(who, what_system, what_user, complexity)
     end
 
     run_task(who, what_user, complexity, task_name, code_string, code_imports, code_body)
-    @info "next done" # DEBUG
+    @info "run_task" # DEBUG
+    
+    # FORCED_AGENCY[] && return next("AOS", "continue towards your goal")
 end
 next(who, what_user, complexity) = next(who, "", what_user, complexity)
 next(who, what_user) = next(who, what_user, 0.5)
 next(what_user) = next("user", what_user, 1.0)
-function next(w::Bool=true)
-    # todo important rm old listen threads first
-    # @show INPUT_DEVICES # DEBUG
-    devices_to_listen = filter(kv -> kv[1] != :REPL, INPUT_DEVICES)
-    [Threads.@spawn listen(device) for (_, device) in devices_to_listen]
-    # block ~ depends where the system is run from
-    if w
-        wait(Condition())
-    end
+
+function retry_on_error(why, who, prev_input, prev_output, complexity)
+    # @info "retry_on_error", why
+    what_system = join([
+        "Your code failed because $why",
+        "The `input` was\n$prev_input",
+        "Your output code was\n$prev_output"
+    ])
+    what_user = "Fix and retry without making the same mistake again if appropriate"
+    next(who, what_system, what_user, complexity)
 end
 
 function run_task(who, what_user::String, complexity, task_name::Symbol, code_string::String, code_imports::Expr, code_body::Expr)
@@ -152,18 +166,11 @@ function run_task(who, what_user::String, complexity, task_name::Symbol, code_st
                 @info "got eval(code_imports)" # DEBUG
                 eval(code_body)
             catch e
-                @error "run_task", e # DEBUG
                 e isa InterruptException && return
                 e_string = Base.invokelatest(string, hasfield(typeof(e), :task) ? e.task.exception : e)
-                who = string(who) * "_evalcodeerrorrerun"
-                what_system = join([
-                    "`TASKS[:$task_name]` failed with Exception: $e_string",
-                    previous_input_output(TASKS[task_name].input, TASKS[task_name].output)...,])
-                what_user = "Fix or restart it if appropriate"
-                return next(who, what_system, what_user, complexity)
+                return retry_on_error("`TASKS[:$task_name]` failed with Exception: $e_string", "$(who)_evalcodeerrorrerun", TASKS[task_name].input, TASKS[task_name].output, complexity)
             end)
 end
-previous_input_output(in, out) = ["The `input` was\n$in", "Your output code was\n$out"]
 
 add_latest_task_closure(ex) = ex
 function add_latest_task_closure(ex::Expr)

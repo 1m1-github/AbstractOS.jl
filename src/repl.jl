@@ -1,11 +1,12 @@
 import Pkg
-Pkg.add("ReplMaker")
+Pkg.add(["ReplMaker"])
 using REPL, ReplMaker
 
 learn(:REPLOutput)
 learn(:REPLInput)
 
 atreplinit() do _
+    # todo @suppress
     initrepl(
         repl_parse,
         prompt_text="aos> ",
