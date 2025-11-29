@@ -137,8 +137,6 @@ function next(who, what_system, what_user, complexity)
 
     run_task(who, what_user, complexity, task_name, code_string, code_imports, code_body)
     @info "run_task" # DEBUG
-    
-    # FORCED_AGENCY[] && return next("AOS", "continue towards your goal")
 end
 next(who, what_user, complexity) = next(who, "", what_user, complexity)
 next(who, what_user) = next(who, what_user, 0.5)
@@ -165,6 +163,7 @@ function run_task(who, what_user::String, complexity, task_name::Symbol, code_st
                 eval(code_imports)
                 @info "got eval(code_imports)" # DEBUG
                 eval(code_body)
+                FORCED_AGENCY[] && next("AOS", "continue towards your goal if not fully achieved: $(what_user)")
             catch e
                 e isa InterruptException && return
                 e_string = Base.invokelatest(string, hasfield(typeof(e), :task) ? e.task.exception : e)
