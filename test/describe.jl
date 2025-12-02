@@ -136,7 +136,7 @@ code = """
 
        end
 """
-correct_description = [
+correct_state = [
 "\"f2 is good\"\nf2=2",
 "f4=4",
 "\"f6 is good\"\nf6(a::Int)::Int",
@@ -181,12 +181,12 @@ exprs = find_api_macrocalls(expr)
 for i in eachindex(exprs)
     e = exprs[i]
     # @show i, e
-    # @show describe_api_macrocall(e)
-    @test correct_description[i] == describe(e)
+    # @show state_api_macrocall(e)
+    @test correct_state[i] == state(e)
 end
 
 # expression=exprs[35]
-# describe(expression)
+# state(expression)
 
 # expression=expression.args[end].args[1].args[1]
 
@@ -203,4 +203,4 @@ end
 # """
 # expr = Meta.parse(code)
 # exprs = find_api_macrocalls(expr)
-# describe(exprs[1])
+# state(exprs[1])

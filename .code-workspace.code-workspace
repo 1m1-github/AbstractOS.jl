@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../AbstractOS-Knowledge"
+		},
+		{
+			"path": "../../logs"
+		}
+	],
+	"settings": {}
+}
