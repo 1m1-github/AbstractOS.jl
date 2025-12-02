@@ -1,192 +1,152 @@
-const YOUR_PURPOSE = "you operate a learning and truthful computer operating system called AOS (AbstractOS)"
-
-abstract type IODevice end
-abstract type InputDevice <: IODevice end # e.g. microphone, keyboard, camera, touch, ...
-abstract type OutputDevice <: IODevice end # e.g. speaker, screen, AR, VR, touch, ...
-import Base.take! # ∃ take!(::InputDevice, ...)
-import Base.put! # ∃ put!(::OutputDevice, ...)
-
-struct TaskElement
-    # todo maybe add `who`
-    task_name::Symbol
-    input::String
-    output::String
-    task::Task
-end
-
-# const FORCED_AGENCY = Ref(false)
-const SAFE = Ref(false)
-const LOCK = ReentrantLock()
-const INPUT_DEVICES = Dict{Symbol,InputDevice}()
-const OUTPUT_DEVICES = Dict{Symbol,OutputDevice}()
-const MEMORY = Dict{Symbol,Any}()
-const KNOWLEDGE = Dict{Symbol,String}()
-const TASKS = Dict{Symbol,TaskElement}(:latest_task => TaskElement(:latest_task, "", "", Task(() -> nothing)))
-const SIGNALS = Dict{Symbol,Bool}(:stop_next => false, :intelligence_running => false)
-
+"Everything after `@api` will be passed into state"
 macro api(args...)
     isempty(args) && return nothing
     esc(args[end])
-end # used to denote parts of `KNOWLEDGE` that are presented to the `intelligence` as abilities that can be considered black-boxes (can be a struct, type, function, variable)
+end # used to denote parts of SHORT_TERM_MEMORY that are summarized via the signature and docstring without including the implementation
 
-global OS_ROOT_DIR, OS_SRC_DIR, OS_KNOWLEDGE_DIR # only persist to OS_ROOT_DIR
-include("describe.jl") # contains `describe` for various types
+@api abstract type Peripheral end
+@api abstract type InputPeripheral <: Peripheral end # e.g. microphone, keyboard, camera, touch, ...
+@api abstract type OutputPeripheral <: Peripheral end # e.g. speaker, screen, AR, VR, touch, ...
+import Base.take! # ∃ take!(::InputPeripheral, ...)
+import Base.put! # ∃ put!(::OutputPeripheral, ...)
 
-function learn(code_name::Symbol, code::String)
-    @info "learn", code_name # DEBUG
-    try
-        code_expr = Meta.parse("begin $code end")
-        code_name ∈ keys(KNOWLEDGE) && return
-        code ∈ collect(values(KNOWLEDGE)) && return
-        eval(code_expr)
-        describe.(find_api_macrocalls(code_expr)) # code should be describable
-        KNOWLEDGE[code_name] = code
-        write(joinpath(OS_KNOWLEDGE_DIR, "$code_name.jl"), code)
+@api JuliaCode = String
+@api Time = Float64
+"Each what/how combition creates an Action"
+@api struct Action
+    when::Time
+    who::Any
+    what_summary::JuliaCode
+    what::JuliaCode
+    how_summary::JuliaCode
+    how::JuliaCode
+    task::Task
+end
+
+if !isdefined(Main, :FIRST_RUN)
+@api const LOCK = ReentrantLock()
+@api const INPUTS = Dict{JuliaCode,InputPeripheral}()
+@api const OUTPUTS = Dict{JuliaCode,OutputPeripheral}()
+@api const SHORT_TERM_MEMORY = Dict{JuliaCode,JuliaCode}()
+@api const SIGNALS = Dict{JuliaCode,Bool}("intelligence running" => false)
+@api const ACTIONS = Dict{Time,Action}()
+@api const ERRORS = Dict{Time,Exception}()
+end
+@api global CONFIG_PATH, CORE_PATH
+"You can move info to and from LONG_TERM_MEMORY_DIR to access your long term memory"
+@api global LONG_TERM_MEMORY_DIR 
+include("state.jl") # contains `state` for various types
+
+function act(when, who, what_summary, what, how_summary, how)
+    @info "act", when, who, what, how
+    ACTIONS[when] = Action(when, who, what_summary, what, how_summary, how,
+    Threads.@spawn try
+        how_expression = get_how_expression(how)
+        how_imports, how_body = separate(how_expression) # `using`s, `import`s are `eval`ed separately
+        eval(how_imports)
+        eval(how_body)
     catch e
-        show(e)
-        throw(e)
-    end
+        ERRORS[when] = e
+    end)
+    when
+end
+act(when::Time, who, what, how) = act(when, who, extract_summary(how, what, :what_summary), what, extract_summary(how, how, :how_summary), how)
+"use `act(what_summary, what, how_summary, how)` to run any code"
+@api act(what_summary, what, how_summary, how) = act(time(), "self", what_summary, what, how_summary, how)
+"short hand to using extract_summary"
+@api act(what, how) = act(extract_summary(how, what, :what_summary), what, extract_summary(how, how, :how_summary), how)
+
+"use `learn` to add to short or long term memory"
+@api function learn(what_summary::JuliaCode, what::JuliaCode, startup::Bool=false)
+    @info "learn", what_summary, startup
+    what_expr = Meta.parse("begin $what end")
+    what_summary ∈ keys(SHORT_TERM_MEMORY) && return
+    what ∈ collect(values(SHORT_TERM_MEMORY)) && return
+    eval(what_expr)
+    state.(find_api_macrocalls(what_expr)) # `what` should be `state`able
+    SHORT_TERM_MEMORY[what_summary] = what
+    write(joinpath(LONG_TERM_MEMORY_DIR, "$what_summary.jl"), what)
+    startup && add_to_startup(how_swhat_summaryummary, what)
+    return
+end
+
+function add_to_startup(what_summary, what)
+    learn_call = "learn($(repr(what_summary)), $(repr(what)))"
+    config_content = read(CONFIG_PATH, JuliaCode)
+    contains(config_content, learn_call) && return
+    open(CONFIG_PATH, "a") do f write(f, learn_call * "\n") end
 end
 
 # todo @true mode = provable open source, always runs with SAFE==true
+if !isdefined(Main, :FIRST_RUN)
+const LAST_ACTION = Ref{Time}(0.0)
+end
+next(who, what_friend, complexity) = next(who, "", what_friend, complexity)
+next(who, what_friend) = next(who, what_friend, 0.5)
+next(what_friend) = next("friend", what_friend, 1.0)
+function next(who, what_self, what_friend, complexity)
+    @info "next", who, what_self, what_friend, complexity
+    what_self = state() * "\n" * what_self
+    when = time()
+    SIGNALS["intelligence running"] = true
+    how = intelligence(who, what_self, what_friend, complexity)
+    SIGNALS["intelligence running"] = false
+    when < LAST_ACTION[] && return
+    LAST_ACTION[] = when
+    act(when, who, what_friend, how)
+end
 
-function listen(device::InputDevice)
-    @info "listen", typeof(device) # DEBUG
+@api function listen(r::InputPeripheral)
     while true
         yield()
-        @info "waiting to take!", typeof(device) # DEBUG
-        output = take!(device)
-        @info "listen output", output # DEBUG
-        isempty(output) && continue
-        @lock LOCK next(device, output)
-    end
-end
-function listen(w::Bool=true)
-    # todo important rm old listen threads first
-    # @show INPUT_DEVICES # DEBUG
-    devices_to_listen = filter(kv -> kv[1] != :REPL, INPUT_DEVICES)
-    [Threads.@spawn listen(device) for (_, device) in devices_to_listen]
-    # block ~ depends where the system is run from
-    if w
-        wait(Condition())
+        what = take!(r)
+        isempty(what) && continue
+        @lock LOCK next(r, what)
     end
 end
 
-function check_signals()
-    if SIGNALS[:stop_next]
-        @info "next SIGNALS[:stop_next]" # DEBUG
-        return SIGNALS[:stop_next] = false
-    end
-    SIGNALS[:intelligence_running] && return false
-    return SIGNALS[:intelligence_running] = true
+"listens to all input peripherals"
+@api function awaken(w::Bool=true)
+    rs = filter(kv -> !startswith(kv[1], "REPL"), INPUTS) # ?
+    listen_in_thread = "Threads.@spawn listen"
+    [act("listen", "on $k", "In a thread and try catch", """what_summary="listening";how_summary="$(listen_in_thread)(\$r)";$(listen_in_thread)($r)""") for (k, r) in rs]
+    w && wait(Condition())
 end
 
-function next(who, what_system, what_user, complexity)
-    @info "next", who, what_system, what_user, complexity # DEBUG
-    !check_signals() && return
-
-    system_state = describe() * "\n" * what_system
-    @info "got system_state", length(string(who) * system_state * what_user) # DEBUG
-    # isa(who, IODevice) && (system_state *= "\nThis is direct input from the user, first will run at lower complexity, use it for planning\n")
-
-    input_logfile = file_stream("input.jl") # DEBUG
-    write(input_logfile, "$who\n$system_state\n$what_user") # DEBUG
-    close(input_logfile) # DEBUG
-    
-    code_string = ""
+summary(what) = intelligence("self", "Summarize succinctly yet memorably as a short string.", what, 0.1)
+function extract_summary(how::JuliaCode, what::JuliaCode, var_name::Symbol)::JuliaCode
     try
-        # todo @async to get REPl
-        code_string = intelligence(who, system_state, what_user, complexity) # `next` is the attached intelligence (you), giving us the natural next output information from input information, and the output should be Julia code
-        # code_string = read("/Users/1m1/logs/log-1764389100-output.jl", String) # DEBUG
-        # who="user" # DEBUG
-        # what_user="""give me a list (api) of abilities you want to have to be a useful system. you can name each function as you want or expect. these are abilities that you reuse often, given that you have access to a stateful julia vm including internet access.""" # DEBUG
-        # complexity=0.5 # DEBUG
+        how_expression = Meta.parse("begin $how end")
+        extract_summary(how_expression, what, var_name)
     catch e
-        @error "`intelligence` failed", e
-        return
-    finally
-        SIGNALS[:intelligence_running] = false
+        startswith(string(var_name), "what") && return what[1:10]
+        startswith(string(var_name), "how") && return how[1:10]
+        throw(e)
     end
-
-    @info "code_string", code_string # DEBUG
-    output_logfile = file_stream("output.jl") # DEBUG
-    write(output_logfile, code_string) # DEBUG
-    close(output_logfile) # DEBUG
-
-    code_expression = nothing
-    try
-        code_expression = Meta.parse(join(["begin", code_string, "end"], '\n'))
-        code_expression.head == :incomplete && throw(code_expression.args[1])
-        @info "got code_expression", code_expression # DEBUG
-    catch e return retry_on_error("`Meta.parse`: $e", "$(who)_parseerrorrerun", what_user, code_string, complexity) end
-    
-    task_name = nothing
-    try
-        task_name = taskname(code_expression)
-        @info "got task_name", task_name # DEBUG
-    catch e return retry_on_error("`taskname` failed: $e", "$(who)_tasknameerrorrerun", what_user, code_string, complexity) end
-
-    code_imports, code_body = separate(code_expression)
-    @info "got code_imports", code_imports # DEBUG
-    @info "got code_body", code_body # DEBUG
-    if SAFE[] && !confirm()
-        @info "SAFE && !confirm()" # DEBUG
-        TASKS[:latest_task] = TaskElement(:latest_task, what_user, code_string, Task(() -> nothing)) # to have to access to the suggested code
-        return # 'SAFE' guaranteed to be settable by the user (via the REPL)
-    end
-
-    run_task(who, what_user, complexity, task_name, code_string, code_imports, code_body)
-    @info "run_task" # DEBUG
 end
-next(who, what_user, complexity) = next(who, "", what_user, complexity)
-next(who, what_user) = next(who, what_user, 0.5)
-next(what_user) = next("user", what_user, 1.0)
-
-function retry_on_error(why, who, prev_input, prev_output, complexity)
-    # @info "retry_on_error", why
-    what_system = join([
-        "Your code failed because $why",
-        "The `input` was\n$prev_input",
-        "Your output code was\n$prev_output"
-    ])
-    what_user = "Fix and retry without making the same mistake again if appropriate"
-    next(who, what_system, what_user, complexity)
+function extract_summary(how_expression::Expr, what::JuliaCode, var_name::Symbol)::JuliaCode
+    _summary = _extract_summary(how_expression, var_name)
+    !isnothing(_summary) && return _summary
+    summary(what)
+end
+function _extract_summary(how::Expr, var_name::Symbol)
+    how.head == :(=) && how.args[1] == var_name && return string(how.args[2])
+    how.head ≠ :block && return nothing
+    found = filter(!isnothing, _extract_summary.(how.args, var_name))
+    length(found) == 1 && return only(found)
+    nothing
+end
+_extract_summary(::Any, ::Symbol) = nothing
+function get_how_expression(how)
+    how_expression = Meta.parse("begin $how end")
+    how_expression.head == :incomplete && throw(how_expression.args[1])
+    how_expression
 end
 
-function run_task(who, what_user::String, complexity, task_name::Symbol, code_string::String, code_imports::Expr, code_body::Expr)
-    @info "run_task", who, what_user, complexity, task_name # DEBUG
-    code_body = add_latest_task_closure(code_body)
-    @info "got add_latest_task_closure", code_body # DEBUG
-    TASKS[:latest_task] = TASKS[task_name] =
-        TaskElement(task_name, what_user, code_string,
-            Threads.@spawn try
-                eval(code_imports)
-                @info "got eval(code_imports)" # DEBUG
-                eval(code_body)
-                FORCED_AGENCY[] && next("AOS", "continue towards your goal if not fully achieved: $(what_user)")
-            catch e
-                e isa InterruptException && return
-                e_string = Base.invokelatest(string, hasfield(typeof(e), :task) ? e.task.exception : e)
-                return retry_on_error("`TASKS[:$task_name]` failed with Exception: $e_string", "$(who)_evalcodeerrorrerun", TASKS[task_name].input, TASKS[task_name].output, complexity)
-            end)
-end
-
-add_latest_task_closure(ex) = ex
-function add_latest_task_closure(ex::Expr)
-    if ex.head == :(=) && isa(ex.args[1], Expr) && ex.args[1].head == :ref && ex.args[1].args[1] == :TASKS && ex.args[1].args[2] == QuoteNode(:latest_task)
-        throw("write to `TASKS[:latest_task]` not allowed for closure")
-    end
-    new_args = [add_latest_task_closure(a) for a in ex.args]
-    if ex.head == :ref && length(ex.args) == 2 && ex.args[1] == :TASKS && ex.args[2] == QuoteNode(:latest_task)
-        return TASKS[:latest_task]
-    end
-    Expr(ex.head, new_args...)
-end
-
-function separate(code::Expr)::Tuple{Expr,Expr}
+function separate(how::Expr)::Tuple{Expr,Expr}
     imports = Expr(:block)
-    cleaned = Expr(code.head)
-    for arg in code.args
+    cleaned = Expr(how.head)
+    for arg in how.args
         if isa(arg, Expr)
             if arg.head in (:using, :import) || (arg.head == :call && arg.args[1] == :(Pkg.add))
                 push!(imports.args, arg)
@@ -204,23 +164,7 @@ function separate(code::Expr)::Tuple{Expr,Expr}
     imports, cleaned
 end
 
-function taskname(code::Expr)::Symbol
-    task_name = _taskname(code)
-    isnothing(task_name) && throw("need to set `task_name`")
-    task_name
-end
-_taskname(::Any) = nothing
-function _taskname(code::Expr)
-    if code.head == :(=) && code.args[1] == :task_name
-        return code.args[2].value
-    end
-    code.head ≠ :block && return nothing
-    only(filter(!isnothing, _taskname.(code.args)))
-end
-
-function confirm()
-    print("run code Y/n")
-    answer = lowercase(strip(readline()))
-    @info answer # DEBUG
-    isempty(answer) || answer == 'y'
+if !isdefined(Main, :FIRST_RUN)
+    FIRST_RUN = false
+    learn("CORE", read(CORE_PATH, JuliaCode))
 end
