@@ -3,18 +3,18 @@
 
 ## params
 
-const ROOT_DIR = joinpath("/", "Users", "1m1")
-const CORE_PATH = joinpath(ROOT_DIR, "src", "core.jl")
-const KNOWLEDGE_DIR = joinpath(ROOT_DIR, "knowledge")
-const CONFIG_PATH = @__FILE__
+const ROOT = joinpath("/", "Users", "1m1")
+const CORE = joinpath(ROOT, "src", "core.jl")
+const KNOWLEDGE_DIR = joinpath(ROOT, "knowledge")
+const CONFIG = @__FILE__
 
 ## logging # DEBUG
 
-include(joinpath(ROOT_DIR, "src", "log.jl"))
+include(joinpath(ROOT, "src", "log.jl"))
 
 ## core
 
-include(joinpath(ROOT_DIR, "src", "core.jl"))
+include(joinpath(ROOT, "src", "core.jl"))
 # safe = true # cannot be true for agency to work
 
 ## utils

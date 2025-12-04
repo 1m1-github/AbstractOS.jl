@@ -10,11 +10,12 @@ Logging.min_enabled_level(logger::Logger) = min(Logging.min_enabled_level(logger
 Logging.shouldlog(logger::Logger, level, _module, group, id) = Logging.shouldlog(logger.console_logger, level, _module, group, id) || Logging.shouldlog(logger.file_logger, level, _module, group, id)
 
 Logging.handle_message(logger::Logger, level, message, _module, group, id, file, line; kwargs...) = begin
+    message = ("<$(time())>",  message)
     Logging.handle_message(logger.console_logger, level, message, _module, group, id, file, line; kwargs...) # DEBUG
     Logging.handle_message(logger.file_logger, level, message, _module, group, id, file, line; kwargs...)
 end
 
-const file_stream(x) = open(joinpath(ROOT_DIR, "logs", "log-$(round(Int, time()))-$x"), "a")
+const file_stream(x) = open(joinpath(ROOT, "logs", "log-$(time())-$x"), "a")
 const file_logger = SimpleLogger(file_stream("aos.txt"), Logging.Info)
 const console_logger = ConsoleLogger(stdout, Logging.Info)
 const logger = Logger(console_logger, file_logger)

@@ -41,7 +41,7 @@ function state(how_summary::JuliaCode, how::JuliaCode)
     end
     join(results, '\n')
 end
-function state(ACTIONS, ERRORS)
+function state_actions_and_errors()
     results = ["ACTIONS and ERRORS BEGIN"]
     whens = sort(unique([collect(keys(ACTIONS))..., collect(keys(ERRORS))...]))
     for when in whens
@@ -184,6 +184,15 @@ function _extract_summary(how::Expr, var_name::Symbol)
     nothing
 end
 _extract_summary(::Any, ::Symbol) = nothing
+
+function add_to_startup(what_summary, what)
+    learn_call = "learn($(repr(what_summary)), $(repr(what)))"
+    config_content = read(CONFIG, JuliaCode)
+    contains(config_content, learn_call) && return
+    open(CONFIG, "a") do f
+        write(f, learn_call * "\n")
+    end
+end
 
 function separate(how::Expr)::Tuple{Expr,Expr}
     imports = Expr(:block)
