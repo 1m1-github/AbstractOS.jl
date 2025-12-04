@@ -135,19 +135,12 @@ function awaken(w::Bool=true)
     w && wait(Condition())
 end
 
-mutable struct Loop <: InputPeripheral
-    duration::Time
-    # action::Action
-end
+mutable struct Loop <: InputPeripheral duration::Time end
 take!(l::Loop) = begin sleep(l.duration) ; "Loop" end
-# loop_act(ΔT) = act("Loop", "", "", "while true sleep($ΔT);put!(::Loop) end")
 function set_sleep_duration(ΔT)
     ΔT ≤ 0.0 && ΔT == Inf && return # desire to live
-    # stop_action(INPUTS["Loop"].action) # schedule's an InterruptException
-    # INPUTS["Loop"].action = loop_act(ΔT)
     INPUTS["Loop"].duration = ΔT
 end
-# INPUTS["Loop"] = Loop(ΔT, loop_act(ΔT)) # consciousness emerges from a loop
 INPUTS["Loop"] = Loop(10.0) # consciousness emerges from a loop
 
 AOS = something
