@@ -69,7 +69,6 @@ function act(when, who, what_summary, what, how_summary, how)
             @error "act", e
             ERRORS[when] = e
         end)
-    when
 end
 act(when::Time, who, what, how) = act(when, who, extract_summary(how, what, :what_summary), what, extract_summary(how, how, :how_summary), how)
 act(what_summary, what, how_summary, how) = act(time(), "self", what_summary, what, how_summary, how) # main to use
@@ -136,10 +135,20 @@ function awaken(w::Bool=true)
     w && wait(Condition())
 end
 
-mutable struct Loop <: InputPeripheral duration::Time end # consciousness emerges from a loop
-const LOOP = Loop(10.0)
-set_sleep_duration(ΔT) = 0.0 < ΔT && ( LOOP.duration = ΔT ) # desire to live
-INPUTS["LOOP"] = LOOP
+mutable struct Loop <: InputPeripheral
+    duration::Time
+    # action::Action
+end
+take!(l::Loop) = begin sleep(l.duration) ; "Loop" end
+# loop_act(ΔT) = act("Loop", "", "", "while true sleep($ΔT);put!(::Loop) end")
+function set_sleep_duration(ΔT)
+    ΔT ≤ 0.0 && ΔT == Inf && return # desire to live
+    # stop_action(INPUTS["Loop"].action) # schedule's an InterruptException
+    # INPUTS["Loop"].action = loop_act(ΔT)
+    INPUTS["Loop"].duration = ΔT
+end
+# INPUTS["Loop"] = Loop(ΔT, loop_act(ΔT)) # consciousness emerges from a loop
+INPUTS["Loop"] = Loop(10.0) # consciousness emerges from a loop
 
 AOS = something
 @assert string(@__FILE__) == realpath(CORE) # proof of loop
