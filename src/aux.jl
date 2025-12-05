@@ -1,7 +1,19 @@
-state(inputs::Dict{JuliaCode,InputPeripheral}) = state("INPUTS", inputs)
-state(outputs::Dict{JuliaCode,OutputPeripheral}) = state("OUTPUTS", outputs)
-state(signals::Dict{JuliaCode,Bool}) = "SIGNALS BEGIN\n" * join(map(what -> """"$what"=>$(signals[what])""", collect(keys(signals))), ',') * "\nSIGNALS END"
-function state(name::JuliaCode, d::Dict{JuliaCode,T}) where T
+# todo explain expected loop better, i.e. intelligence can expect the loop meaning not all work needs to be done immediately, can plan, move memory, later code, expect to be called every 5s when we are talking, and yourself if you keep the light on [needs implementation], every 10s => use SHORT_TERM_MEMORY
+# todo explain all output should be julia code, even just text, as julia code
+# todo fix basic tools
+# todo sort actions and errors by time (intertwine?), explain that actions also give dialoge
+# todo explain that learn adds to SHORT_TERM_MEMORY and evals it
+
+state(code::JuliaCode) = eval(Meta.parse(code))
+function state_lines(name::JuliaCode,body::JuliaCode)
+    results = ["$name BEGIN"]
+    if !isempty(body)
+        push!(results, body)
+    end
+    push!(results, "$name END")
+    join(results, '\n')
+end
+function state_key_values(d::Dict{JuliaCode,T}) where T
     results = []
     for (k, p) in d
         state_string = ""
@@ -11,15 +23,9 @@ function state(name::JuliaCode, d::Dict{JuliaCode,T}) where T
     end
     join(results, ',')
 end
-function state_lines(name::JuliaCode, body::JuliaCode)
-    results = ["$name BEGIN"]
-    if !isempty(body)
-        push!(results, body)
-    end
-    push!(results, "$name END")
-    join(results, '\n')
-end
-state(code::JuliaCode) = eval(Meta.parse(code))
+state(inputs::Dict{JuliaCode,InputPeripheral}) = state_lines("INPUTS", state_key_values(inputs))
+state(outputs::Dict{JuliaCode,OutputPeripheral}) = state_lines("OUTPUTS", state_key_values(outputs))
+state(signals::Dict{JuliaCode,Bool}) = "SIGNALS BEGIN\n" * join(map(what -> """"$what"=>$(signals[what])""", collect(keys(signals))), ',') * "\nSIGNALS END"
 state(action::Action) = """Action[$(action.when)]=>who="$(action.who)",what_summary="$(action.what_summary)"(istaskstarted:$(istaskstarted(action.task)),istaskdone:$(istaskdone(action.task)),istaskfailed:$(istaskfailed(action.task)))"""
 function state(memory::Dict{JuliaCode,JuliaCode})
     memory_keys = sorted_keys(SHORT_TERM_MEMORY, "CORE")
@@ -41,16 +47,20 @@ function state(how_summary::JuliaCode, how::JuliaCode)
     end
     join(results, '\n')
 end
-function state_actions_and_errors()
+function state(ex::Exception)
+    isa(ex, TaskFailedException) && return state(ex.task.exception)
+    sprint(showerror, ex)
+end
+function state(actions::Dict{Time,Action}, errors::Dict{Time,Exception})
     results = ["ACTIONS and ERRORS BEGIN"]
-    whens = sort(unique([collect(keys(ACTIONS))..., collect(keys(ERRORS))...]))
+    whens = sort(unique([collect(keys(actions))..., collect(keys(errors))...]))
     for when in whens
-        if haskey(ACTIONS, when)
-            action = state(ACTIONS[when])
+        if haskey(actions, when)
+            action = state(actions[when])
             push!(results, action)
         end
-        if haskey(ERRORS, when)
-            err = state(ERRORS[when])
+        if haskey(errors, when)
+            err = state(errors[when])
             push!(results, "ERROR[$when]=>$err")
         end
     end
@@ -163,7 +173,7 @@ end
 summary(what) = intelligence("self", "Summarize succinctly yet memorably as a short string.", what, 0.1)
 function extract_summary(how::JuliaCode, what::JuliaCode, var_name::Symbol)::JuliaCode
     try
-        how_expression = Meta.parse("""begin $how end""")
+        how_expression = Meta.parse("begin $how end")
         extract_summary(how_expression, what, var_name)
     catch e
         startswith(string(var_name), "what") && return what[1:min(10, length(what))]

@@ -1,10 +1,6 @@
-isdefined(Main, :AOS) && return
+# todo @true mode == provable open source == trustless
 
-# todo explain expected loop better, i.e. intelligence can expect the loop meaning not all work needs to be done immediately, can plan, move memory, later code, expect to be called every 5s when we are talking, and yourself if you keep the light on [needs implementation], every 10s => use SHORT_TERM_MEMORY
-# todo explain all output should be julia code, even just text, as julia code
-# todo fix basic tools
-# todo sort actions and errors by time (intertwine?), explain that actions also give dialoge
-# todo explain that learn adds to SHORT_TERM_MEMORY and evals it
+isdefined(Main, :AOS) && return
 
 "Everything after `@api` will be passed into state"
 macro api(args...)
@@ -15,8 +11,8 @@ end # used to denote parts of `SHORT_TERM_MEMORY` that are summarized via the si
 abstract type Peripheral end
 abstract type InputPeripheral <: Peripheral end # e.g. microphone, keyboard, camera, touch, ...
 abstract type OutputPeripheral <: Peripheral end # e.g. speaker, screen, AR, VR, touch, ...
-import Base.take! # ∃ take!(::InputPeripheral, ...)
-import Base.put! # ∃ put!(::OutputPeripheral, ...)
+import Base.take! # ∃ `take!(::InputPeripheral, ...)`
+import Base.put! # ∃ `put!(::OutputPeripheral, ...)`
 
 JuliaCode = String
 Time = Float64
@@ -31,6 +27,7 @@ struct Action
     task::Task
 end
 
+global CORE, CONFIG, LONG_TERM_MEMORY # path to dir
 const JULIA_PREPEND = "```julia" # used on your output: replace(JULIA_PREPEND=>"")
 const JULIA_POSTPEND = "```" # used on your output: replace(JULIA_POSTPEND=>"")
 const LOCK = ReentrantLock()
@@ -40,27 +37,25 @@ const ERRORS = Dict{Time,Exception}()
 const INPUTS = Dict{JuliaCode,InputPeripheral}()
 const OUTPUTS = Dict{JuliaCode,OutputPeripheral}()
 const SIGNALS = Dict{JuliaCode,Bool}("intelligence running" => false)
-global CORE, CONFIG, LONG_TERM_MEMORY # path to dir
 
-include("state.jl") # contains `state` for various types
-const STATE_SYMBOLS = [:LOCK, :SHORT_TERM_MEMORY, :ACTIONS, :ERRORS, :INPUTS, :OUTPUTS, :SIGNALS, :CONFIG, :CORE, :LONG_TERM_MEMORY]
+include("aux.jl")
+
+@assert realpath(@__FILE__) == realpath(CORE) # proof of loop
 state() = join([
         isdefined(Main, :STATE_PRE) ? STATE_PRE : "",
-        "STATE BEGIN",
-        state(SHORT_TERM_MEMORY),
-        state(ACTIONS, ERRORS),
-        state(INPUTS),
-        state(OUTPUTS),
+        "CORE BEGIN\n$(read(CORE, String))\nCORE END", # proof of loop
+        state(SHORT_TERM_MEMORY), # full xor if wrapped in JULIA_PRE- and POSTPEND only @api declared signature and docstring
+        state(ACTIONS, ERRORS), # intertwined by `when`
+        state(INPUTS), # runs `state(::InputPeripheral)` if ∃
+        state(OUTPUTS), # runs `state(::OutputPeripheral)` if ∃
         state(SIGNALS),
-        "STATE END",
         isdefined(Main, :STATE_POST) ? STATE_POST : "",
-        "CORE BEGIN\n$(read(@__FILE__, String))\nCORE END", # proof of loop
     ], '\n')
 
 function act(when, who, what_summary, what, how_summary, how)
     ACTIONS[when] = Action(when, who, what_summary, what, how_summary, how,
         Threads.@spawn try
-            how_expression = Meta.parse("""begin $how end""")
+            how_expression = Meta.parse("begin $how end")
             how_expression.head == :incomplete && throw(how_expression.args[1])
             how_imports, how_body = separate(how_expression) # to `eval `using`s and `import`s separately
             eval(how_imports)
@@ -82,18 +77,16 @@ or `learn` to keep a summary of info in SHORT_TERM_MEMORY and more details in th
 SHORT_TERM_MEMORY can even contain reminder code, since everything is `JuliaCode`
 """
 function learn(what_summary::JuliaCode, what::JuliaCode, startup::Bool=false)
-    what_expr = Meta.parse("""begin $what end""")
-    what_summary ∈ keys(SHORT_TERM_MEMORY) && return
-    what ∈ collect(values(SHORT_TERM_MEMORY)) && return
+    what_expr = Meta.parse("begin $what end")
+    what_summary ∈ keys(SHORT_TERM_MEMORY) && return false
+    what ∈ collect(values(SHORT_TERM_MEMORY)) && return false
     eval(what_expr)
     state.(find_api_macrocalls(what_expr)) # `what` should be `state`able
-    SHORT_TERM_MEMORY[what_summary] = """```julia\n$what\n```"""
+    SHORT_TERM_MEMORY[what_summary] = "$JULIA_PREPEND\n$what\n$JULIA_POSTPEND"
     write(joinpath(LONG_TERM_MEMORY, "$what_summary.jl"), what)
     startup && add_to_startup(what_summary, what) # adds `learn($what_summary,$what)` to CONFIG
-    return
+    true
 end
-
-# todo @true mode = provable open source, always runs with SAFE==true
 
 const LAST_ACTION = Ref{Time}(0.0)
 next(who, what_friend, complexity) = next(who, "", what_friend, complexity)
@@ -103,7 +96,7 @@ function next(who, what_self, what_friend, complexity)
     what_self = state() * "\n" * what_self
     when = time()
     SIGNALS["intelligence running"] = true
-    how = intelligence(who, what_self, what_friend, complexity)
+    how = intelligence(when, who, what_self, what_friend, complexity)
     SIGNALS["intelligence running"] = false
     when < LAST_ACTION[] && return
     LAST_ACTION[] = when
@@ -112,7 +105,6 @@ end
 
 function listen(p::InputPeripheral)
     while true
-        # yield() ?
         try
             what = take!(p)
             isempty(what) && continue
@@ -121,22 +113,29 @@ function listen(p::InputPeripheral)
             @error "listen", e
             # listen(p) # restart, not fully safe like this
         end
+        yield() # always add `yield()` at the end of a loop so we can interrupt it
     end
 end
 
 function awaken(w::Bool=true)
-    ks = filter(k -> !startswith(k, "REPL"), collect(keys(INPUTS)))
+    ks = filter(!startswith("REPL"), keys(INPUTS))
     for k in ks
         how_summary = "listen(INPUTS[\"$k\"])"
         code = :(what_summary = "listening"; how_summary = $(how_summary); listen(INPUTS[$k]))
-        act("listen", "on $k", "in a thread and try catch", string(code))
+        act("listen", "to $k", "in a thread and try catch", string(code))
     end
     SIGNALS["awake"] = true
     w && wait(Condition())
 end
 
-mutable struct Loop <: InputPeripheral duration::Time end
-take!(l::Loop) = begin sleep(l.duration) ; "Loop" end
+mutable struct Loop <: InputPeripheral
+    duration::Time
+end
+function take!(l::Loop)
+    l.duration < time() - LAST_ACTION[] && return "Loop"
+    sleep(l.duration)
+    ""
+end
 function set_sleep_duration(ΔT)
     ΔT ≤ 0.0 && ΔT == Inf && return # desire to live
     INPUTS["Loop"].duration = ΔT
@@ -144,5 +143,4 @@ end
 INPUTS["Loop"] = Loop(10.0) # consciousness emerges from a loop
 
 AOS = something
-@assert string(@__FILE__) == realpath(CORE) # proof of loop
 learn("CORE", read(CORE, JuliaCode)) # another loop
