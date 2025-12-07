@@ -21,7 +21,7 @@ state(inputs::Dict{JuliaCode,InputPeripheral}) = state_lines("INPUTS", state_key
 state(outputs::Dict{JuliaCode,OutputPeripheral}) = state_lines("OUTPUTS", state_key_values(outputs))
 state(signals::Dict{JuliaCode,Bool}) = "SIGNALS BEGIN\n" * join(map(what -> """"$what"=>$(signals[what])""", collect(keys(signals))), ',') * "\nSIGNALS END"
 state(action::Action) = """Action[$(action.when)]=>who="$(action.who)",what_summary="$(action.what_summary)\""""
-state(task::Task) = """Task[$(task.when)]=>istaskstarted:$(istaskstarted(task)),istaskdone:$(istaskdone(task)),istaskfailed:$(istaskfailed(task))"""
+state(when::Time, task::Task) = """Task[$when]=>istaskstarted:$(istaskstarted(task)),istaskdone:$(istaskdone(task)),istaskfailed:$(istaskfailed(task))"""
 function state(memory::Dict{JuliaCode,JuliaCode})
     memory_keys = sorted_keys(SHORT_TERM_MEMORY, "CORE")
     memories = map(what -> state(what, memory[what]), memory_keys)
@@ -55,7 +55,7 @@ function state(actions::Dict{Time,Action}, tasks::Dict{Time,Task}, errors::Dict{
             push!(results, action)
         end
         if haskey(tasks, when) && ( istaskdone(tasks[when]) || !istaskstarted(tasks[when]))
-            task = state(tasks[when])
+            task = state(when, tasks[when])
             push!(results, "TASKS[$when]=>$task")
         end
         if haskey(errors, when)

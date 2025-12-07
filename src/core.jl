@@ -61,7 +61,7 @@ function act(when, who, what_summary, what, how_summary, how)
         eval(how_imports)
         eval(how_body)
     catch e
-        @error "act", e
+        @error "act", when, e
         ERRORS[when] = e
     end
 end
