@@ -15,7 +15,8 @@ Logging.handle_message(logger::Logger, level, message, _module, group, id, file,
     Logging.handle_message(logger.file_logger, level, message, _module, group, id, file, line; kwargs...)
 end
 
-const file_stream(x) = open(joinpath(ROOT, "logs", "$(time())-$x"), "a")
+const LOG = joinpath(ROOT, "logs")
+const file_stream(x) = open(joinpath(LOG, "$(time())-$x"), "a")
 const file_logger = SimpleLogger(file_stream("aos.txt"), Logging.Info)
 const console_logger = ConsoleLogger(stdout, Logging.Info)
 const logger = Logger(console_logger, file_logger)

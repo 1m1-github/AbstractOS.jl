@@ -1,9 +1,3 @@
-# todo explain expected loop better, i.e. intelligence can expect the loop meaning not all work needs to be done immediately, can plan, move memory, later code, expect to be called every 5s when we are talking, and yourself if you keep the light on [needs implementation], every 10s => use SHORT_TERM_MEMORY
-# todo explain all output should be julia code, even just text, as julia code
-# todo fix basic tools
-# todo sort actions and errors by time (intertwine?), explain that actions also give dialoge
-# todo explain that learn adds to SHORT_TERM_MEMORY and evals it
-
 state(code::JuliaCode) = eval(Meta.parse(code))
 function state_lines(name::JuliaCode,body::JuliaCode)
     results = ["$name BEGIN"]
@@ -18,7 +12,7 @@ function state_key_values(d::Dict{JuliaCode,T}) where T
     for (k, p) in d
         state_string = ""
         try state_string = state(p) catch _ end
-        full_string = """"$k\"=>$state_string"""
+        full_string = """"$k"=>$state_string"""
         push!(results, full_string)
     end
     join(results, ',')
@@ -26,7 +20,8 @@ end
 state(inputs::Dict{JuliaCode,InputPeripheral}) = state_lines("INPUTS", state_key_values(inputs))
 state(outputs::Dict{JuliaCode,OutputPeripheral}) = state_lines("OUTPUTS", state_key_values(outputs))
 state(signals::Dict{JuliaCode,Bool}) = "SIGNALS BEGIN\n" * join(map(what -> """"$what"=>$(signals[what])""", collect(keys(signals))), ',') * "\nSIGNALS END"
-state(action::Action) = """Action[$(action.when)]=>who="$(action.who)",what_summary="$(action.what_summary)"(istaskstarted:$(istaskstarted(action.task)),istaskdone:$(istaskdone(action.task)),istaskfailed:$(istaskfailed(action.task)))"""
+state(action::Action) = """Action[$(action.when)]=>who="$(action.who)",what_summary="$(action.what_summary)\""""
+state(task::Task) = """Task[$(task.when)]=>istaskstarted:$(istaskstarted(task)),istaskdone:$(istaskdone(task)),istaskfailed:$(istaskfailed(task))"""
 function state(memory::Dict{JuliaCode,JuliaCode})
     memory_keys = sorted_keys(SHORT_TERM_MEMORY, "CORE")
     memories = map(what -> state(what, memory[what]), memory_keys)
@@ -36,7 +31,7 @@ function state(how_summary::JuliaCode, how::JuliaCode)
     results = ["""SHORT_TERM_MEMORY["$how_summary"]="""]
     if startswith(how, JULIA_PREPEND) && endswith(how, JULIA_POSTPEND)
         how = how[length(JULIA_PREPEND)+1:end-length(JULIA_POSTPEND)-1]
-        how_expr = Meta.parse("""begin $how end""")
+        how_expr = Meta.parse("begin $how end")
         api_how_exprs = find_api_macrocalls(how_expr)
         exprs_state = state.(api_how_exprs)
         exprs_state = filter(!isempty, exprs_state)
@@ -51,20 +46,24 @@ function state(ex::Exception)
     isa(ex, TaskFailedException) && return state(ex.task.exception)
     sprint(showerror, ex)
 end
-function state(actions::Dict{Time,Action}, errors::Dict{Time,Exception})
-    results = ["ACTIONS and ERRORS BEGIN"]
-    whens = sort(unique([collect(keys(actions))..., collect(keys(errors))...]))
+function state(actions::Dict{Time,Action}, tasks::Dict{Time,Task}, errors::Dict{Time,Exception})
+    results = ["ACTIONS, TASKS and ERRORS BEGIN"]
+    whens = sort(unique([collect(keys(actions))..., collect(keys(tasks))..., collect(keys(errors))...]))
     for when in whens
         if haskey(actions, when)
             action = state(actions[when])
             push!(results, action)
+        end
+        if haskey(tasks, when) && ( istaskdone(tasks[when]) || !istaskstarted(tasks[when]))
+            task = state(tasks[when])
+            push!(results, "TASKS[$when]=>$task")
         end
         if haskey(errors, when)
             err = state(errors[when])
             push!(results, "ERROR[$when]=>$err")
         end
     end
-    push!(results, "ACTIONS and ERRORS END")
+    push!(results, "ACTIONS, TASKS and ERRORS END")
     join(results, '\n')
 end
 "only run for anything following `@api` (can be following a docstring)"
