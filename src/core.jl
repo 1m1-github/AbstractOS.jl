@@ -52,7 +52,28 @@ state() = join([
         isdefined(Main, :STATE_POST) ? STATE_POST : "",
     ], '\n')
 
+"""
+use `learn` to add to short and long term memory
+only `learn` code that is reliable
+no need to learn only for SHORT_TERM_MEMORY
+or `learn` to keep a summary of info in SHORT_TERM_MEMORY and more details in the LONG_TERM_MEMORY
+SHORT_TERM_MEMORY can even contain reminder code, since everything is `JuliaCode`
+"""
+function learn(what_summary::JuliaCode, what::JuliaCode, startup::Bool=false)
+    @info "learn", what_summary, what, startup
+    what_expr = Meta.parse("begin $what end")
+    what_summary ∈ keys(SHORT_TERM_MEMORY) && return false
+    what ∈ collect(values(SHORT_TERM_MEMORY)) && return false
+    eval(what_expr)
+    state.(find_api_macrocalls(what_expr)) # `what` should be `state`able
+    SHORT_TERM_MEMORY[what_summary] = "$JULIA_PREPEND\n$what\n$JULIA_POSTPEND"
+    write(joinpath(LONG_TERM_MEMORY, "$what_summary.jl"), what)
+    startup && add_to_startup(what_summary, what) # adds `learn($what_summary,$what)` to CONFIG
+    true
+end
+
 function act(when, who, what_summary, what, how_summary, how)
+    @info "act", when, who, what_summary, what, how_summary, how
     ACTIONS[when] = Action(when, who, what_summary, what, how_summary, how)
     TASKS[when] = Threads.@spawn try
         how_expression = Meta.parse("begin $how end")
@@ -66,63 +87,44 @@ function act(when, who, what_summary, what, how_summary, how)
     end
 end
 act(when::Time, who, what, how) = act(when, who, extract_summary(how, what, :what_summary), what, extract_summary(how, how, :how_summary), how)
-act(what_summary, what, how_summary, how) = act(time(), "self", what_summary, what, how_summary, how) # main to use
+act(what_summary, what, how_summary, how) = act(time(), "self", what_summary, what, how_summary, how) # mainly use this `act` to run code separated from other code
 act(what, how) = act(extract_summary(how, what, :what_summary), what, extract_summary(how, how, :how_summary), how)
 
-"""
-use `learn` to add to short and long term memory
-only `learn` code that is reliable
-no need to learn only for SHORT_TERM_MEMORY
-or `learn` to keep a summary of info in SHORT_TERM_MEMORY and more details in the LONG_TERM_MEMORY
-SHORT_TERM_MEMORY can even contain reminder code, since everything is `JuliaCode`
-"""
-function learn(what_summary::JuliaCode, what::JuliaCode, startup::Bool=false)
-    what_expr = Meta.parse("begin $what end")
-    what_summary ∈ keys(SHORT_TERM_MEMORY) && return false
-    what ∈ collect(values(SHORT_TERM_MEMORY)) && return false
-    eval(what_expr)
-    state.(find_api_macrocalls(what_expr)) # `what` should be `state`able
-    SHORT_TERM_MEMORY[what_summary] = "$JULIA_PREPEND\n$what\n$JULIA_POSTPEND"
-    write(joinpath(LONG_TERM_MEMORY, "$what_summary.jl"), what)
-    startup && add_to_startup(what_summary, what) # adds `learn($what_summary,$what)` to CONFIG
-    true
-end
-
 const LAST_ACTION = Ref{Time}(0.0)
-next(who, what_friend, complexity) = next(who, "", what_friend, complexity)
-next(who, what_friend) = next(who, what_friend, 0.5)
-next(what_friend) = next("friend", what_friend, 1.0)
-function next(who, what_self, what_friend, complexity)
-    what_self = state() * "\n" * what_self
+function next(who, what)
+    @info "next", who, what
     when = time()
     SIGNALS["intelligence running"] = true
-    how = intelligence(when, who, what_self, what_friend, complexity)
+    how = intelligence(when, who, state(), what)
     SIGNALS["intelligence running"] = false
     when < LAST_ACTION[] && return
     LAST_ACTION[] = when
-    act(when, who, what_friend, how)
+    act(when, who, what, how)
 end
 
-function listen(p::InputPeripheral)
+function listen(who::InputPeripheral)
+    @info "listen", who
     while true
         try
-            what = take!(p)
+            what = take!(who)
             isempty(what) && continue
-            @lock LOCK next(p, what)
+            @lock LOCK next(who, what)
         catch e
             @error "listen", e
-            # listen(p) # restart, not fully safe like this
+            # listen(who) # restart, not fully safe like this
         end
         yield() # always add `yield()` at the end of a loop so we can interrupt it
     end
 end
 
 function awaken(w::Bool=true)
+    @info "awaken", w
     ks = filter(!startswith("REPL"), keys(INPUTS))
     for k in ks
         how_summary = "listen(INPUTS[\"$k\"])"
-        code = :(what_summary = "listening"; how_summary = $(how_summary); listen(INPUTS[$k]))
-        act("listen", "to $k", "in a thread and try catch", string(code))
+        what_summary = "listen to \"$k\""
+        code = :(what_summary = $(what_summary); how_summary = $(how_summary); listen(INPUTS[$k]))
+        act(what_summary, what_summary, how_summary, string(code))
     end
     SIGNALS["awake"] = true
     w && wait(Condition())
@@ -132,6 +134,7 @@ mutable struct Loop <: InputPeripheral
     duration::Time
 end
 function take!(l::Loop)
+    @info "take!", l
     l.duration < time() - LAST_ACTION[] && return "Loop"
     sleep(l.duration)
     ""

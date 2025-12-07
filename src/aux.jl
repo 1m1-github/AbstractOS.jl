@@ -20,8 +20,8 @@ end
 state(inputs::Dict{JuliaCode,InputPeripheral}) = state_lines("INPUTS", state_key_values(inputs))
 state(outputs::Dict{JuliaCode,OutputPeripheral}) = state_lines("OUTPUTS", state_key_values(outputs))
 state(signals::Dict{JuliaCode,Bool}) = "SIGNALS BEGIN\n" * join(map(what -> """"$what"=>$(signals[what])""", collect(keys(signals))), ',') * "\nSIGNALS END"
-state(action::Action) = """Action[$(action.when)]=>who="$(action.who)",what_summary="$(action.what_summary)\""""
-state(when::Time, task::Task) = """Task[$when]=>istaskstarted:$(istaskstarted(task)),istaskdone:$(istaskdone(task)),istaskfailed:$(istaskfailed(task))"""
+state(action::Action) = """who="$(action.who)",what_summary="$(action.what_summary)\""""
+state(task::Task) = "istaskstarted:$(istaskstarted(task)),istaskdone:$(istaskdone(task)),istaskfailed:$(istaskfailed(task))"
 function state(memory::Dict{JuliaCode,JuliaCode})
     memory_keys = sorted_keys(SHORT_TERM_MEMORY, "CORE")
     memories = map(what -> state(what, memory[what]), memory_keys)
@@ -52,10 +52,10 @@ function state(actions::Dict{Time,Action}, tasks::Dict{Time,Task}, errors::Dict{
     for when in whens
         if haskey(actions, when)
             action = state(actions[when])
-            push!(results, action)
+            push!(results, "ACTIONS[$when]=>$action")
         end
         if haskey(tasks, when) && ( istaskdone(tasks[when]) || !istaskstarted(tasks[when]))
-            task = state(when, tasks[when])
+            task = state(tasks[when])
             push!(results, "TASKS[$when]=>$task")
         end
         if haskey(errors, when)
@@ -169,7 +169,9 @@ function filter_returning_both(p, a)
     match, non_match
 end
 
-summary(what) = intelligence("self", "Summarize succinctly yet memorably as a short string.", what, 0.1)
+"Asks low complexity `intelligence` to summarize the text succintly"
+@api summary(what) = intelligence("Summarize succinctly (used as a key) yet memorably the following: $what", 0.1)
+
 function extract_summary(how::JuliaCode, what::JuliaCode, var_name::Symbol)::JuliaCode
     try
         how_expression = Meta.parse("begin $how end")
