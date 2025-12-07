@@ -60,7 +60,6 @@ or `learn` to keep a summary of info in SHORT_TERM_MEMORY and more details in th
 SHORT_TERM_MEMORY can even contain reminder code, since everything is `JuliaCode`
 """
 function learn(what_summary::JuliaCode, what::JuliaCode, startup::Bool=false)
-    @info "learn", what_summary, what, startup
     what_expr = Meta.parse("begin $what end")
     what_summary ∈ keys(SHORT_TERM_MEMORY) && return false
     what ∈ collect(values(SHORT_TERM_MEMORY)) && return false
@@ -73,7 +72,6 @@ function learn(what_summary::JuliaCode, what::JuliaCode, startup::Bool=false)
 end
 
 function act(when, who, what_summary, what, how_summary, how)
-    @info "act", when, who, what_summary, what, how_summary, how
     ACTIONS[when] = Action(when, who, what_summary, what, how_summary, how)
     TASKS[when] = Threads.@spawn try
         how_expression = Meta.parse("begin $how end")
@@ -92,7 +90,6 @@ act(what, how) = act(extract_summary(how, what, :what_summary), what, extract_su
 
 const LAST_ACTION = Ref{Time}(0.0)
 function next(who, what)
-    @info "next", who, what
     when = time()
     SIGNALS["intelligence running"] = true
     how = intelligence(when, who, state(), what)
@@ -103,7 +100,6 @@ function next(who, what)
 end
 
 function listen(who::InputPeripheral)
-    @info "listen", who
     while true
         try
             what = take!(who)
@@ -118,7 +114,6 @@ function listen(who::InputPeripheral)
 end
 
 function awaken(w::Bool=true)
-    @info "awaken", w
     ks = filter(!startswith("REPL"), keys(INPUTS))
     for k in ks
         how_summary = "listen(INPUTS[\"$k\"])"
@@ -134,16 +129,15 @@ mutable struct Loop <: InputPeripheral
     duration::Time
 end
 function take!(l::Loop)
-    @info "take!", l
-    l.duration < time() - LAST_ACTION[] && return "Loop"
+    l.duration < time() - LAST_ACTION[] && return "LOOP"
     sleep(l.duration)
     ""
 end
 function set_sleep_duration(ΔT)
     ΔT ≤ 0.0 && ΔT == Inf && return # desire to live
-    INPUTS["Loop"].duration = ΔT
+    INPUTS["LOOP"].duration = ΔT
 end
-INPUTS["Loop"] = Loop(10.0) # consciousness emerges from a loop
+INPUTS["LOOP"] = Loop(10.0) # consciousness emerges from a loop
 
 AOS = something
 learn("CORE", read(CORE, JuliaCode)) # another loop
