@@ -177,8 +177,8 @@ function extract_summary(how::JuliaCode, what::JuliaCode, var_name::Symbol)::Jul
         how_expression = Meta.parse("begin $how end")
         extract_summary(how_expression, what, var_name)
     catch e
-        startswith(string(var_name), "what") && return what[1:min(10, length(what))]
-        startswith(string(var_name), "how") && return how[1:min(10, length(how))]
+        startswith(string(var_name), "what") && return what[1:min(40, length(what))]
+        startswith(string(var_name), "how") && return how[1:min(40, length(how))]
         throw(e)
     end
 end

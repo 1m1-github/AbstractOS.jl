@@ -88,7 +88,7 @@ act(when::Time, who, what, how) = act(when, who, extract_summary(how, what, :wha
 act(what_summary, what, how_summary, how) = act(time(), "self", what_summary, what, how_summary, how) # mainly use this `act` to run code separated from other code
 act(what, how) = act(extract_summary(how, what, :what_summary), what, extract_summary(how, how, :how_summary), how)
 
-const LAST_ACTION = Ref{Time}(0.0)
+const LAST_ACTION = Ref{Time}(time())
 function next(who, what)
     when = time()
     SIGNALS["intelligence running"] = true
@@ -119,6 +119,7 @@ function awaken(w::Bool=true)
         how_summary = "listen(INPUTS[\"$k\"])"
         what_summary = "listen to \"$k\""
         code = :(what_summary = $(what_summary); how_summary = $(how_summary); listen(INPUTS[$k]))
+        code.args = filter(a -> !isa(a, LineNumberNode), code.args)
         act(what_summary, what_summary, how_summary, string(code))
     end
     SIGNALS["awake"] = true
