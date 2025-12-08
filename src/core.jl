@@ -33,7 +33,7 @@ const LOCK = ReentrantLock()
 const SHORT_TERM_MEMORY = Dict{JuliaCode,JuliaCode}()
 const ACTIONS = Dict{Time,Action}()
 const TASKS = Dict{Time,Task}()
-const ERRORS = Dict{Time,Exception}()
+const EXCEPTIONS = Dict{Time,Exception}()
 const INPUTS = Dict{JuliaCode,InputPeripheral}()
 const OUTPUTS = Dict{JuliaCode,OutputPeripheral}()
 const SIGNALS = Dict{JuliaCode,Bool}("intelligence running" => false)
@@ -45,7 +45,7 @@ state() = join([
         isdefined(Main, :STATE_PRE) ? STATE_PRE : "",
         "CORE BEGIN\n$(read(CORE, String))\nCORE END", # proof of loop
         state(SHORT_TERM_MEMORY), # full xor if wrapped in JULIA_PRE- and POSTPEND only @api declared signature and docstring
-        state(ACTIONS, TASKS, ERRORS), # intertwined by `when`
+        state(ACTIONS, TASKS, EXCEPTIONS), # intertwined by `when`
         state(INPUTS), # runs `state(::InputPeripheral)` if ∃
         state(OUTPUTS), # runs `state(::OutputPeripheral)` if ∃
         state(SIGNALS),
@@ -81,7 +81,7 @@ function act(when, who, what_summary, what, how_summary, how)
         eval(how_body)
     catch e
         @error "act", when, e
-        ERRORS[when] = e
+        EXCEPTIONS[when] = e
     end
 end
 act(when::Time, who, what, how) = act(when, who, extract_summary(how, what, :what_summary), what, extract_summary(how, how, :how_summary), how)

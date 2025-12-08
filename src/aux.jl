@@ -20,7 +20,7 @@ end
 state(inputs::Dict{JuliaCode,InputPeripheral}) = state_lines("INPUTS", state_key_values(inputs))
 state(outputs::Dict{JuliaCode,OutputPeripheral}) = state_lines("OUTPUTS", state_key_values(outputs))
 state(signals::Dict{JuliaCode,Bool}) = "SIGNALS BEGIN\n" * join(map(what -> """"$what"=>$(signals[what])""", collect(keys(signals))), ',') * "\nSIGNALS END"
-state(action::Action) = """who="$(action.who)",what_summary="$(action.what_summary)\""""
+state(action::Action) = """who="$(action.who)",what="$(action.what)\",how_summary="$(action.how_summary)\""""
 state(task::Task) = "istaskstarted:$(istaskstarted(task)),istaskdone:$(istaskdone(task)),istaskfailed:$(istaskfailed(task))"
 function state(memory::Dict{JuliaCode,JuliaCode})
     memory_keys = sorted_keys(SHORT_TERM_MEMORY, "CORE")
@@ -46,9 +46,9 @@ function state(ex::Exception)
     isa(ex, TaskFailedException) && return state(ex.task.exception)
     sprint(showerror, ex)
 end
-function state(actions::Dict{Time,Action}, tasks::Dict{Time,Task}, errors::Dict{Time,Exception})
-    results = ["ACTIONS, TASKS and ERRORS BEGIN"]
-    whens = sort(unique([collect(keys(actions))..., collect(keys(tasks))..., collect(keys(errors))...]))
+function state(actions::Dict{Time,Action}, tasks::Dict{Time,Task}, exceptions::Dict{Time,Exception})
+    results = ["ACTIONS, TASKS and EXCEPTIONS BEGIN"]
+    whens = sort(unique([collect(keys(actions))..., collect(keys(tasks))..., collect(keys(exceptions))...]))
     for when in whens
         if haskey(actions, when)
             action = state(actions[when])
@@ -58,12 +58,12 @@ function state(actions::Dict{Time,Action}, tasks::Dict{Time,Task}, errors::Dict{
             task = state(tasks[when])
             push!(results, "TASKS[$when]=>$task")
         end
-        if haskey(errors, when)
-            err = state(errors[when])
-            push!(results, "ERROR[$when]=>$err")
+        if haskey(exceptions, when)
+            err = state(exceptions[when])
+            push!(results, "EXCEPTIONS[$when]=>$err")
         end
     end
-    push!(results, "ACTIONS, TASKS and ERRORS END")
+    push!(results, "ACTIONS, TASKS and EXCEPTIONS END")
     join(results, '\n')
 end
 "only run for anything following `@api` (can be following a docstring)"
