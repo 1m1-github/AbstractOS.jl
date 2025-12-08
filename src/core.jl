@@ -33,7 +33,6 @@ const LOCK = ReentrantLock()
 const SHORT_TERM_MEMORY = Dict{JuliaCode,JuliaCode}()
 const ACTIONS = Dict{Time,Action}()
 const TASKS = Dict{Time,Task}()
-const EXCEPTIONS = Dict{Time,Exception}()
 const INPUTS = Dict{JuliaCode,InputPeripheral}()
 const OUTPUTS = Dict{JuliaCode,OutputPeripheral}()
 const SIGNALS = Dict{JuliaCode,Bool}("intelligence running" => false)
@@ -45,7 +44,7 @@ state() = join([
         isdefined(Main, :STATE_PRE) ? STATE_PRE : "",
         "CORE BEGIN\n$(read(CORE, String))\nCORE END", # proof of loop
         state(SHORT_TERM_MEMORY), # full xor if wrapped in JULIA_PRE- and POSTPEND only @api declared signature and docstring
-        state(ACTIONS, TASKS, EXCEPTIONS), # intertwined by `when`
+        state(ACTIONS, TASKS), # intertwined by `when`
         state(INPUTS), # runs `state(::InputPeripheral)` if ∃
         state(OUTPUTS), # runs `state(::OutputPeripheral)` if ∃
         state(SIGNALS),
@@ -73,23 +72,24 @@ end
 
 function act(when, who, what_summary, what, how_summary, how)
     # lock(LOCK) do
-        ACTIONS[when] = Action(when, who, what_summary, what, how_summary, how)
+    ACTIONS[when] = Action(when, who, what_summary, what, how_summary, how)
     # end
-    TASKS[when] = Threads.@spawn try
+    TASKS[when] = Threads.@spawn begin
+    # try
         how_expression = Meta.parse("begin $how end")
         how_expression.head == :incomplete && throw(how_expression.args[1])
         how_imports, how_body = separate(how_expression) # to `eval `using`s and `import`s separately
         eval(how_imports)
         eval(how_body)
-    catch e
+    # catch e
         # @info "caught something", when, e
         # lock(LOCK) do
-            EXCEPTIONS[when] = e
+            # EXCEPTIONS[when] = e
         # end
         # try EXCEPTIONS[when] = e
         # catch e2 @error "act2", when, e2 end
-        @error "act", when, e
-        rethrow(e)
+        # @error "act", when, e
+        # rethrow(e)
     end
 end
 act(when::Time, who, what, how) = act(when, who, extract_summary(how, what, :what_summary), what, extract_summary(how, how, :how_summary), how)
