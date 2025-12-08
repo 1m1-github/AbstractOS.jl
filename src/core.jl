@@ -107,6 +107,7 @@ function listen(who::InputPeripheral)
             @lock LOCK next(who, what)
         catch e
             @error "listen", e
+            break
             # listen(who) # restart, not fully safe like this
         end
         yield() # always add `yield()` at the end of a loop so we can interrupt it
