@@ -72,7 +72,9 @@ function learn(what_summary::JuliaCode, what::JuliaCode, startup::Bool=false)
 end
 
 function act(when, who, what_summary, what, how_summary, how)
-    ACTIONS[when] = Action(when, who, what_summary, what, how_summary, how)
+    # lock(LOCK) do
+        ACTIONS[when] = Action(when, who, what_summary, what, how_summary, how)
+    # end
     TASKS[when] = Threads.@spawn try
         how_expression = Meta.parse("begin $how end")
         how_expression.head == :incomplete && throw(how_expression.args[1])
@@ -80,8 +82,14 @@ function act(when, who, what_summary, what, how_summary, how)
         eval(how_imports)
         eval(how_body)
     catch e
+        # @info "caught something", when, e
+        # lock(LOCK) do
+            EXCEPTIONS[when] = e
+        # end
+        # try EXCEPTIONS[when] = e
+        # catch e2 @error "act2", when, e2 end
         @error "act", when, e
-        EXCEPTIONS[when] = e
+        rethrow(e)
     end
 end
 act(when::Time, who, what, how) = act(when, who, extract_summary(how, what, :what_summary), what, extract_summary(how, how, :how_summary), how)
@@ -89,11 +97,17 @@ act(what_summary, what, how_summary, how) = act(time(), "self", what_summary, wh
 act(what, how) = act(extract_summary(how, what, :what_summary), what, extract_summary(how, how, :how_summary), how)
 
 const LAST_ACTION = Ref{Time}(time())
-function next(who, what)
-    when = time()
+function next(when, who, what)
+    # when = time()
     SIGNALS["intelligence running"] = true
-    how = intelligence(when, who, state(), what)
+    how = nothing
+    try
+        how = intelligence(when, who, state(), what)
+    catch e
+        @error "intelligence", when, e
+    end
     SIGNALS["intelligence running"] = false
+    isnothing(how) && return
     when < LAST_ACTION[] && return
     LAST_ACTION[] = when
     act(when, who, what, how)
@@ -101,15 +115,16 @@ end
 
 function listen(who::InputPeripheral)
     while true
-        try
+        # try
             what = take!(who)
+        # catch e
             isempty(what) && continue
-            @lock LOCK next(who, what)
-        catch e
-            @error "listen", e
-            break
+            when = time()
+            @lock LOCK next(when, who, what)
+            # @error "listen", when, e
+            # break
             # listen(who) # restart, not fully safe like this
-        end
+        # end
         yield() # always add `yield()` at the end of a loop so we can interrupt it
     end
 end
