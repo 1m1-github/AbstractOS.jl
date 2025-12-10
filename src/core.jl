@@ -132,6 +132,7 @@ function take!(l::Loop)
     ""
 end
 function set_sleep_duration(ΔT)
+    # todo reset current `sleep`
     ΔT ≤ 0.0 && ΔT == Inf && return # desire to live
     INPUTS["LOOP"].duration = ΔT
 end

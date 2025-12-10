@@ -54,8 +54,8 @@ end
 state(action::Action) = """who=\"$(action.who)\",what=\"$(action.what)\",how=\"$(action.how)\""""
 function state(actions::Dict{Time,Action}, tasks::Dict{Time,Task})
     results = ["ACTIONS and TASKS BEGIN"]
-    for (when, action) in sort(collect(keys(actions)))
-        push!(results, "ACTIONS[$when]=>$(state(action))")
+    for when in sort(collect(keys(actions)))
+        push!(results, "ACTIONS[$when]=>$(state(actions[when]))")
         push!(results, "TASKS[$when]=>$(state(tasks[when]))")
     end
     push!(results, "ACTIONS and TASKS END")
