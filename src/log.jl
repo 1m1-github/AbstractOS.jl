@@ -13,6 +13,7 @@ Logging.handle_message(logger::Logger, level, message, _module, group, id, file,
     message = ("<$(time())>",  message)
     Logging.handle_message(logger.console_logger, level, message, _module, group, id, file, line; kwargs...) # DEBUG
     Logging.handle_message(logger.file_logger, level, message, _module, group, id, file, line; kwargs...)
+    flush(logger.file_logger.stream)
 end
 
 const LOG = joinpath(ROOT, "logs")

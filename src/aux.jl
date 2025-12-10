@@ -44,78 +44,23 @@ function state(ex::Exception)
     isa(ex, TaskFailedException) && return state(ex.task.exception)
     sprint(showerror, ex)
 end
-# state(action::Action) = """who="$(action.who)",what="$(action.what)\",how_summary="$(action.how_summary)\""""
-# state(action::Action, when::Time) = istaskfailed(TASKS[when]) ? state(action, :how) : state(action, :how_summary)
-state(task::Task) = "istaskstarted:$(istaskstarted(task)),istaskdone:$(istaskdone(task)),istaskfailed:$(istaskfailed(task))"
-state(action::Action, how_name::Symbol, how_value) = """who=\"$(action.who)\",what=\"$(action.what)\",$(how_name)=\"$(how_value)\""""
-function state(actions::Dict{Time,Action}, tasks::Dict{Time,Task})
-    results = ["ACTIONS, TASKS and EXCEPTIONS BEGIN"]
-    whens = sort!(collect(union(keys(actions), keys(tasks))))
-
-    for when in whens
-        if haskey(actions, when)
-            action = actions[when]
-            how_name = haskey(tasks, when) && istaskfailed(tasks[when]) ? :how : :how_summary
-            how_value = getproperty(action, how_name)
-            push!(results, "ACTIONS[$when]=>$(state(actions[when], how_name, how_value))")
-        end
-
-        if haskey(tasks, when)
-            task = tasks[when]
-            push!(results, "TASKS[$when]=>$(state(task))")
-            if istaskfailed(task)
-                push!(results, "EXCEPTIONS[$when]=>$(state(task.exception))")
-            end
-        end
+function state(task::Task)
+    task_state = "istaskstarted:$(istaskstarted(task)),istaskdone:$(istaskdone(task)),istaskfailed:$(istaskfailed(task))"
+    if istaskfailed(task)
+        task_state = "$(task_state)\n$(task.exception)"
     end
-    push!(results, "ACTIONS, TASKS and EXCEPTIONS END")
+    task_state
+end
+state(action::Action) = """who=\"$(action.who)\",what=\"$(action.what)\",how=\"$(action.how)\""""
+function state(actions::Dict{Time,Action}, tasks::Dict{Time,Task})
+    results = ["ACTIONS and TASKS BEGIN"]
+    for (when, action) in sort(collect(keys(actions)))
+        push!(results, "ACTIONS[$when]=>$(state(action))")
+        push!(results, "TASKS[$when]=>$(state(tasks[when]))")
+    end
+    push!(results, "ACTIONS and TASKS END")
     join(results, '\n')
 end
-# function state(actions::Dict{Time,Action}, tasks::Dict{Time,Task}, exceptions::Dict{Time,Exception})
-#     results = ["ACTIONS, TASKS and EXCEPTIONS BEGIN"]
-#     whens = sort!(collect(union(keys(actions), keys(tasks), keys(exceptions))))
-
-#     for when in whens
-#         if haskey(actions, when)
-#             action = actions[when]
-
-#             how_name = haskey(tasks, when) && istaskfailed(tasks[when]) ? :how : :how_summary
-#             how_value = getproperty(action, how_name)
-#             # push!(results, "ACTIONS[$when]=>who=\"$(action.who)\",what=\"$(action.what)\",$(how_name)=\"$(how_value)\"")
-#             push!(results, "ACTIONS[$when]=>$(state(actions[when], how_name, how_value))")
-#         end
-
-#         if haskey(tasks, when)
-#             push!(results, "TASKS[$when]=>$(state(tasks[when]))")
-#         end
-
-#         if haskey(exceptions, when)
-#             push!(results, "EXCEPTIONS[$when]=>$(state(exceptions[when]))")
-#         end
-#     end
-#     push!(results, "ACTIONS, TASKS and EXCEPTIONS END")
-#     join(results, '\n')
-# end
-# function state(actions::Dict{Time,Action}, tasks::Dict{Time,Task}, exceptions::Dict{Time,Exception})
-#     results = ["ACTIONS, TASKS and EXCEPTIONS BEGIN"]
-#     whens = sort(unique([collect(keys(actions))..., collect(keys(tasks))..., collect(keys(exceptions))...]))
-#     for when in whens
-#         if haskey(actions, when)
-#             action = state(actions[when], when)
-#             push!(results, "ACTIONS[$when]=>$action")
-#         end
-#         if haskey(tasks, when)
-#             task = state(tasks[when])
-#             push!(results, "TASKS[$when]=>$task")
-#         end
-#         if haskey(exceptions, when)
-#             err = state(exceptions[when])
-#             push!(results, "EXCEPTIONS[$when]=>$err")
-#         end
-#     end
-#     push!(results, "ACTIONS, TASKS and EXCEPTIONS END")
-#     join(results, '\n')
-# end
 "only run for anything following `@api` (can be following a docstring)"
 function state(expr::Expr)
     _state = ""
