@@ -1,64 +1,38 @@
-state(code::JuliaCode) = eval(Meta.parse(code))
-function state_lines(name::JuliaCode,body::JuliaCode)
-    results = ["$name BEGIN"]
-    if !isempty(body)
-        push!(results, body)
-    end
-    push!(results, "$name END")
-    join(results, '\n')
+function state(name::Symbol, f::Function)
+    d = getfield(Main, name)
+    ks = sort(collect(keys(d)))
+    lines = map(f, ks)
+    join(lines, '\n')
 end
-function state_key_values(d::Dict{JuliaCode,T}) where T
-    results = []
-    for (k, p) in d
-        state_string = ""
-        try state_string = state(p) catch _ end
-        full_string = """"$k"=>$state_string"""
-        push!(results, full_string)
-    end
-    join(results, ',')
+state(::Dict{String,Any}) = state(:MEMORY, k -> """MEMORY["$k"]=$(state(MEMORY[k]))""")
+state(::Dict{String,Bool}) = state(:FLAGS, k -> """FLAGS["$k"]=$(FLAGS[k])""")
+state(::Dict{String,InputPeripheral}) = state(:INPUTS, k -> """INPUTS["$k"]=$(state(INPUTS[k]))""")
+state(::Dict{String,OutputPeripheral}) = state(:OUTPUTS, k -> """OUTPUTS["$k"]=$(state(OUTPUTS[k]))""")
+
+function state(name::String, code::String="")
+    code_expr = Meta.parse(block(code))
+    api_code_exprs = find_api_macrocalls(code_expr)
+    api_code_exprs_state = filter(!isempty, state.(api_code_exprs))
+    join(api_code_exprs_state, '\n')
 end
-state(inputs::Dict{JuliaCode,InputPeripheral}) = state_lines("INPUTS", state_key_values(inputs))
-state(outputs::Dict{JuliaCode,OutputPeripheral}) = state_lines("OUTPUTS", state_key_values(outputs))
-state(signals::Dict{JuliaCode,Bool}) = "SIGNALS BEGIN\n" * join(map(what -> """"$what"=>$(signals[what])""", collect(keys(signals))), ',') * "\nSIGNALS END"
-function state(memory::Dict{JuliaCode,JuliaCode})
-    memory_keys = sorted_keys(SHORT_TERM_MEMORY, "CORE")
-    memories = map(what -> state(what, memory[what]), memory_keys)
-    state_lines("SHORT_TERM_MEMORY", join(memories, '\n'))
-end
-function state(how_summary::JuliaCode, how::JuliaCode)
-    results = ["""SHORT_TERM_MEMORY["$how_summary"]="""]
-    if startswith(how, JULIA_PREPEND) && endswith(how, JULIA_POSTPEND)
-        how = how[length(JULIA_PREPEND)+1:end-length(JULIA_POSTPEND)-1]
-        how_expr = Meta.parse("begin $how end")
-        api_how_exprs = find_api_macrocalls(how_expr)
-        exprs_state = state.(api_how_exprs)
-        exprs_state = filter(!isempty, exprs_state)
-        isempty(exprs_state) && return ""
-        push!(results, exprs_state...)
-    else
-        push!(results, how)
-    end
-    join(results, '\n')
-end
+state(::Dict{String,JuliaCode}) = state(:CODE, k -> """CODE["$k"]\n$(state(k, CODE[k]))\n""")
+
 function state(ex::Exception)
     isa(ex, TaskFailedException) && return state(ex.task.exception)
     sprint(showerror, ex)
 end
 function state(task::Task)
-    task_state = "istaskstarted:$(istaskstarted(task)),istaskdone:$(istaskdone(task)),istaskfailed:$(istaskfailed(task))"
-    if istaskfailed(task)
-        task_state = "$(task_state)\n$(task.exception)"
-    end
-    task_state
+    task_state = "istaskstarted:$(istaskstarted(task))\nistaskdone:$(istaskdone(task))\nistaskfailed:$(istaskfailed(task))"
+    !istaskfailed(task) && return task_state
+    "$(task_state)\nException=$(task.exception)"
 end
-state(action::Action) = """who=\"$(action.who)\",what=\"$(action.what)\",how=\"$(action.how)\""""
-function state(actions::Dict{Time,Action}, tasks::Dict{Time,Task})
-    results = ["ACTIONS and TASKS BEGIN"]
-    for when in sort(collect(keys(actions)))
-        push!(results, "ACTIONS[$when]=>$(state(actions[when]))")
-        push!(results, "TASKS[$when]=>$(state(tasks[when]))")
+state(action::Action) = """source=\"$(action.source)\"\ninput_summary=\"$(action.input_summary)\"\ninput=\"$(action.input)\"\noutput_summary=\"$(action.output_summary)\"\noutput=\"$(action.output)\""""
+function state(history::Dict{Time,Action}, tasks::Dict{Time,Task})
+    results = []
+    for when in sort(collect(keys(history)))
+        push!(results, "HISTORY[$when]=\n$(state(history[when]))")
+        push!(results, "TASKS[$when]=\n$(state(tasks[when]))")
     end
-    push!(results, "ACTIONS and TASKS END")
     join(results, '\n')
 end
 "only run for anything following `@api` (can be following a docstring)"
@@ -138,7 +112,6 @@ state(x::JuliaCode) = "\"" * x * "\""
 state(x::QuoteNode) = state(x.value)
 state(x) = string(x)
 
-sorted_keys(d, special) = sort(collect(keys(d)); lt=(a,b)->a==special || (b!=special && a<b))
 is_docstring_macrocall(x) = x == GlobalRef(Core, Symbol("@doc")) || x == Expr(:., :Core, QuoteNode(Symbol("@doc")))
 is_api_macrocall(expr::Expr) =
     expr.head == :macrocall &&
@@ -164,46 +137,46 @@ function filter_returning_both(p, a)
     match, non_match
 end
 
+const MAX_SUMMARY_LENGTH = 40
 "Asks low complexity `intelligence` to summarize the text succintly"
-@api summary(what) = intelligence("Summarize succinctly (used as a key) yet memorably the following: $what", 0.1)
-
-function extract_summary(how::JuliaCode, what::JuliaCode, var_name::Symbol)::JuliaCode
+@api summary(input) = intelligence("Summarize succinctly (used as a key) yet memorably the following: $input", 0.1)
+function extract_summary(output::JuliaCode, input, var_name::Symbol)::JuliaCode
     try
-        how_expression = Meta.parse("begin $how end")
-        extract_summary(how_expression, what, var_name)
+        output_expr = Meta.parse(block(output))
+        extract_summary(output_expr, input, var_name)
     catch e
-        startswith(string(var_name), "what") && return what[1:min(40, length(what))]
-        startswith(string(var_name), "how") && return how[1:min(40, length(how))]
+        startswith(string(var_name), "input") && return input[1:min(MAX_SUMMARY_LENGTH, length(input))]
+        startswith(string(var_name), "output") && return output[1:min(MAX_SUMMARY_LENGTH, length(output))]
         throw(e)
     end
 end
-function extract_summary(how_expression::Expr, what::JuliaCode, var_name::Symbol)::JuliaCode
-    _summary = _extract_summary(how_expression, var_name)
+function extract_summary(output_expr::Expr, input, var_name::Symbol)::JuliaCode
+    _summary = _extract_summary(output_expr, var_name)
     !isnothing(_summary) && return _summary
-    summary(what)
+    summary(input)
 end
-function _extract_summary(how::Expr, var_name::Symbol)
-    how.head == :(=) && how.args[1] == var_name && return string(how.args[2])
-    how.head ≠ :block && return nothing
-    found = filter(!isnothing, _extract_summary.(how.args, var_name))
+function _extract_summary(output::Expr, var_name::Symbol)
+    output.head == :(=) && output.args[1] == var_name && return string(output.args[2])
+    output.head ≠ :block && return nothing
+    found = filter(!isnothing, _extract_summary.(output.args, var_name))
     length(found) == 1 && return only(found)
     nothing
 end
 _extract_summary(::Any, ::Symbol) = nothing
 
-function add_to_startup(what_summary, what)
-    learn_call = "learn($(repr(what_summary)), $(repr(what)))"
-    config_content = read(CONFIG, JuliaCode)
-    contains(config_content, learn_call) && return
-    open(CONFIG, "a") do f
+function add_to_boot(summary, code)
+    learn_call = "learn($(repr(summary)), $(repr(code)))"
+    content = read(BOOT, JuliaCode)
+    contains(content, learn_call) && return
+    open(BOOT, "a") do f
         write(f, learn_call * "\n")
     end
 end
 
-function separate(how::Expr)::Tuple{Expr,Expr}
+function separate(code::Expr)::Tuple{Expr,Expr}
     imports = Expr(:block)
-    cleaned = Expr(how.head)
-    for arg in how.args
+    cleaned = Expr(code.head)
+    for arg in code.args
         if isa(arg, Expr)
             if arg.head in (:using, :import) || (arg.head == :call && arg.args[1] == :(Pkg.add))
                 push!(imports.args, arg)
