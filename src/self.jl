@@ -1,6 +1,6 @@
 # todo @true mode == provable open source == trustless
 
-SELF = @__FILE__
+const SELF = @__FILE__
 global BOOT # path to file
 global STORAGE # path to dir
 isdefined(Main, :AbstractOS) && return
