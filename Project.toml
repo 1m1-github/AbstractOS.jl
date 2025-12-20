@@ -1,0 +1,6 @@
+name = "LoopOS"
+uuid = "a3e9bcb5-7ea5-4ea9-9966-9cf0624ab850"
+version = "1"
+
+[compat]
+julia = "1.9"
