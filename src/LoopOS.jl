@@ -1,5 +1,7 @@
 module LoopOS
 
+export BOOT, HISTORY, ENERGY, INTELLIGENCE_RUNNING, LOOP_DURATION, LOCK
+
 abstract type Peripheral end
 abstract type InputPeripheral <: Peripheral end # e.g. Microphone, Keyboard, Camera, Touch, ...
 abstract type OutputPeripheral <: Peripheral end # e.g. Speaker, Screen, AR, VR, Touch, ...
@@ -49,7 +51,10 @@ function next(ts, inputs)
     try
         system, user = state()
         input = join(state.(inputs), "\n---\n")
-        output, ΔE = Main.intelligence(system, user * input)
+        # output, ΔE = Main.intelligence(system, user * input)
+        write("logs/$t-system", system)
+        write("logs/$t-user", user * input)
+        output, ΔE = "@show time()", 0.0
         Threads.atomic_sub!(ENERGY, ΔE)
     catch e
         @error "intelligence", ts, e
@@ -97,7 +102,7 @@ function awaken(boot)
     inputs = filter(s -> s.value isa InputPeripheral, _state)
     [start_listening("$(s.m).$(s.sym)", s.value) for s in inputs]
     Threads.atomic_xchg!(LOOP_DURATION, 0.0)
-    start_listening("LoopOS.LOOP", LOOP)
+    # start_listening("LoopOS.LOOP", LOOP)
     BOOT[] = boot
 end
 
