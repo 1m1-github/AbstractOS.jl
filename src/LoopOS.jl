@@ -1,6 +1,6 @@
 module LoopOS
 
-export BOOT, HISTORY, ENERGY, INTELLIGENCE_RUNNING, LOOP_DURATION, LOCK
+export awaken, listen
 
 abstract type Peripheral end
 abstract type InputPeripheral <: Peripheral end # e.g. Microphone, Keyboard, Camera, Touch, ...
@@ -19,7 +19,7 @@ function take!(::Loop)
     Base.sleep(LOOP_DURATION[])
     ""
 end
-function hybernate(ΔT)
+function hibernate(ΔT)
     (ΔT ≤ 0.0 || ΔT == Inf) && return # desire to live
     Threads.atomic_xchg!(LOOP_DURATION, ΔT)
 end
@@ -32,7 +32,7 @@ end
 struct Action
     ts::Float64
     inputs::Vector{Input}  
-    output::String # NEEDS to be Julia, goes directly into `Meta.parse`
+    output::String # NEEDS to be Julia, goes directly into `Meta.parseall`
     task::Union{Task,Nothing}
 end
 const HISTORY = Ref(Action[])
@@ -52,6 +52,7 @@ function next(ts, inputs)
         system, user = state()
         input = join(state.(inputs), "\n---\n")
         # output, ΔE = Main.intelligence(system, user * input)
+        sleep(1)
         write("logs/$t-system", system)
         write("logs/$t-user", user * input)
         output, ΔE = "@show time()", 0.0
@@ -71,38 +72,39 @@ function listen(source::InputPeripheral)
     PENDING[source] = Channel{Input}(Inf)
     while true
         yield() # always add `yield()` at the beginning of a loop so it can be interrupted
-        input = Base.invokelatest(take!, source) 
+        input = Base.invokelatest(take!, source)
         isempty(input) && continue
         put!(PENDING[source], Input(time(), source, input))
-        Threads.@spawn @lock LOCK flush_pending()
+        @lock Threads.@spawn LOCK flush_pending()
     end
 end
-function start_listening(name, data)
+function listen(name::Symbol, data::InputPeripheral)
     ts = time()
     act(ts, [Input(ts, data, "listen to $(data)")], "LoopOS.listen($name)")
 end
 function flush_pending()
-    inputs = Input[]
-    for (_, ch) in PENDING
-        while isready(ch)
-            push!(inputs, take!(ch))
+    while true
+        inputs = Input[]
+        for (_, ch) in PENDING
+            while isready(ch)
+                push!(inputs, take!(ch))
+            end
         end
+        isempty(inputs) && break
+        sort!(inputs, by=i->i.ts)
+        next(time(), inputs)
     end
-    isempty(inputs) && return
-    sort!(inputs, by=i->i.ts)
-    next(time(), inputs)
-    flush_pending()
 end
 
 const BOOT = Ref("")
 awake() = !isinf(LOOP_DURATION[]) || !isempty(BOOT[])
 function awaken(boot)
-    awake() && return
+    # awake() && return
     _state = jvm()
     inputs = filter(s -> s.value isa InputPeripheral, _state)
-    [start_listening("$(s.m).$(s.sym)", s.value) for s in inputs]
+    [listen("$(s.m).$(s.sym)", s.value) for s in inputs]
     Threads.atomic_xchg!(LOOP_DURATION, 0.0)
-    # start_listening("LoopOS.LOOP", LOOP)
+    # listen("LoopOS.LOOP", LOOP)
     BOOT[] = boot
 end
 
@@ -136,6 +138,10 @@ function state()
     SELF = read(@__FILE__, String) # proof of loop
     cache!(x) = isdefined(Main, :cache!) ? Main.cache!(x) : (x, TrackedSymbol[])
     cached, volatile = cache!(jvm())
+    # @show volatile
+    ts = time()
+    push!(cached, TrackedSymbol(@__MODULE__, :BOOT, BOOT, ts))
+    push!(volatile, [TrackedSymbol(@__MODULE__, s, getfield(@__MODULE__, s), ts) for s in [:ENERGY, :HISTORY]]...)
     STATE_PRE * SELF * state(cached), state(volatile) * STATE_POST
 end
 state(x) = string(x) # Use `dump` if you need to see more of anything but careful, it could be a lot
@@ -150,7 +156,7 @@ function state(t::Task)
     "Task(" * join(_state, ",") * exception * ")"
 end
 function state(x::Exception)
-    isa(x, TaskFailedException) && return state(x.task.exception)
+    x isa TaskFailedException && return state(x.task.exception)
     sprint(showerror, x)
 end
 function state(method::Method)
@@ -170,7 +176,12 @@ function state(_state::Vector{TrackedSymbol}, T::Type)
     lines = String[string(T)]
     for s in _state
         typeof(s.value) ≠ T && continue
-        pre = T ∈ [DataType, Method] ? "" : state(s.sym) * "="
+        pre = ""
+        if T ∉ [DataType, Method]
+            pre *= state(s.sym)
+            T <: Ref && ( pre *= "[]" )
+            pre *= "="
+        end
         push!(lines, pre * state(s.value))
     end
     join(lines, '\n')
@@ -188,9 +199,9 @@ function jvm(m::Module=Main, ts=time()) # You have full access to a stateful Tur
         startswith(string(sym), "#") && continue
         endswith("$m", ".$sym") && continue
         sym ∈ [Symbol(m), :Base, :Core] && continue
-        value = try Base.invokelatest(getfield, m, sym) catch _ end
+        value = isdefined(m, sym) ? Base.invokelatest(getfield, m, sym) : nothing
         isnothing(value) && continue # You can forget by setting a symbol to `nothing`
-        try (parentmodule(value) ∈ [Base, Core] && continue) catch _ end
+        typeof(value) ∈ [UnionAll, DataType, Function, Method, Module] && parentmodule(value) ∈ [Base, Core] && continue
         tracked_symbol(v) = TrackedSymbol(m, sym, v, ts)
         if value isa Function
             methods_in_m = filter(method -> method.module == m, methods(value))
