@@ -9,8 +9,8 @@ const LOOP = Loop(Inf, 1.0)
 const SLEEP = "The purpose of sleep is to reorganize your information, move some from short (to keep a summary) to long memory (to keep the details), and some from long (explore and) to short (make relevant) memory. Your short memory is the JVM, expensive for energy. Your long memory is a SSD, cheap for energy."
 import Base.take!
 function take!(::Loop)
+    isready(PENDING[LOOP]) && return ""
     LOOP.energy < rand() && return SLEEP
-    !isempty(PENDING[LOOP]) && return ""
     LOOP.duration < time() - last_action_time() && return "LOOP"
     Base.sleep(LOOP.duration)
     ""
