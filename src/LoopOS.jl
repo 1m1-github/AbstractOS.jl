@@ -1,27 +1,23 @@
 module LoopOS
 
-export awaken, listen
-
 abstract type Peripheral end
 abstract type InputPeripheral <: Peripheral end # e.g. Microphone, Keyboard, Camera, Touch, ...
 abstract type OutputPeripheral <: Peripheral end # e.g. Speaker, Screen, AR, VR, Touch, ...
 
-const ENERGY = Threads.Atomic{Float64}(1.0)
-const LOOP_DURATION = Threads.Atomic{Float64}(Inf)
-struct Loop <: InputPeripheral end
-const LOOP = Loop()
+mutable struct Loop <: InputPeripheral duration::Float64 ; energy::Float64 end
+const LOOP = Loop(Inf, 1.0)
 const SLEEP = "The purpose of sleep is to reorganize your information, move some from short (to keep a summary) to long memory (to keep the details), and some from long (explore and) to short (make relevant) memory. Your short memory is the JVM, expensive for energy. Your long memory is a SSD, cheap for energy."
 import Base.take!
 function take!(::Loop)
-    ENERGY[] < rand() && return SLEEP
+    LOOP.energy < rand() && return SLEEP
     !isempty(PENDING[LOOP]) && return ""
-    LOOP_DURATION[] < time() - last_action_time() && return "LOOP"
-    Base.sleep(LOOP_DURATION[])
+    LOOP.duration < time() - last_action_time() && return "LOOP"
+    Base.sleep(LOOP.duration)
     ""
 end
 function hibernate(ΔT)
     (ΔT ≤ 0.0 || ΔT == Inf) && return # desire to live
-    Threads.atomic_xchg!(LOOP_DURATION, ΔT)
+    LOOP.duration = ΔT
 end
 
 struct Input
@@ -37,51 +33,47 @@ struct Action
 end
 const HISTORY = Ref(Action[])
 last_action_time() = isempty(HISTORY[]) ? 0.0 : maximum(map(a -> a.ts, HISTORY[]))
+eval_output(expr::Expr) = @invokelatest Base.eval(Main, expr) # You manipulate Main only
+function eval_output(code::String)
+    expr = Meta.parseall(code)
+    expr.head == :incomplete && throw(expr.args[1])
+    eval_output(expr)
+end
 function act(ts, inputs, output)
     ts < last_action_time() && return
-    task = Threads.@spawn eval_code(output)
-    push!(HISTORY[], Action(ts, inputs, output, task))
+    task = Threads.@spawn eval_output(output)
+    push!(HISTORY[], Action(ts, inputs, string(output), task))
 end
 
-const INTELLIGENCE_RUNNING = Ref(false)
 function next(ts, inputs)
-    INTELLIGENCE_RUNNING[] = true
     output = nothing
     t = time()
     try
         system, user = state()
-        input = join(state.(inputs), "\n---\n")
-        # output, ΔE = Main.intelligence(system, user * input)
-        sleep(1)
-        write("logs/$t-system", system)
-        write("logs/$t-user", user * input)
-        output, ΔE = "@show time()", 0.0
-        Threads.atomic_sub!(ENERGY, ΔE)
+        input = join(state.(inputs), '\n')
+        output, ΔE = Main.intelligence(system, user * input)
+        LOOP.energy -= ΔE
     catch e
         @error "intelligence", ts, e
     end
-    Threads.atomic_xchg!(LOOP_DURATION, 2 * (time() - t)) # Good sleep incentive
-    INTELLIGENCE_RUNNING[] = false
+    LOOP.duration = 2 * (time() - t) # Good sleep incentive
     isnothing(output) && return
     act(ts, inputs, output)
 end
 
 const PENDING = Dict{InputPeripheral, Channel{Input}}()
-const LOCK = ReentrantLock()
-function listen(source::InputPeripheral)
+const FLUSH_NOTIFY = Channel{Nothing}(1)
+function take_loop(source)
     PENDING[source] = Channel{Input}(Inf)
     while true
         yield() # always add `yield()` at the beginning of a loop so it can be interrupted
-        input = Base.invokelatest(take!, source)
+        input = @invokelatest take!(source) # ∃
         isempty(input) && continue
         put!(PENDING[source], Input(time(), source, input))
-        @lock Threads.@spawn LOCK flush_pending()
+        isready(FLUSH_NOTIFY) || put!(FLUSH_NOTIFY, nothing)
     end
 end
-function listen(name::Symbol, data::InputPeripheral)
-    ts = time()
-    act(ts, [Input(ts, data, "listen to $(data)")], "LoopOS.listen($name)")
-end
+processor() = while true take!(FLUSH_NOTIFY) ; flush_pending() end
 function flush_pending()
     while true
         inputs = Input[]
@@ -96,25 +88,20 @@ function flush_pending()
     end
 end
 
+const BOOT_TIME = Ref(0.0)
 const BOOT = Ref("")
-awake() = !isinf(LOOP_DURATION[]) || !isempty(BOOT[])
+awake() = !iszero(BOOT_TIME[])
 function awaken(boot)
-    # awake() && return
-    _state = jvm()
-    inputs = filter(s -> s.value isa InputPeripheral, _state)
-    [listen("$(s.m).$(s.sym)", s.value) for s in inputs]
-    Threads.atomic_xchg!(LOOP_DURATION, 0.0)
-    # listen("LoopOS.LOOP", LOOP)
+    awake() && return
+    BOOT_TIME[] = time()
     BOOT[] = boot
+    Threads.@spawn processor()
+    LOOP.duration = 0.0
+    listen(LOOP)
 end
-
-function eval_code(code)
-    exprs = Meta.parseall(code)
-    exprs.head == :incomplete && throw(exprs.args[1])
-    for expr in exprs.args
-        expr isa LineNumberNode && continue
-        Base.invokelatest(Base.eval, Main, expr) # You only manipulate Module Main
-    end
+function listen(source::InputPeripheral) # `InputPeripheral`s should use this to be `listen`ed to
+    ts = time()
+    act(ts, [Input(ts, source, "listen to $(source)")], :(LoopOS.take_loop($source)))
 end
 
 # For Long Memory, you have access to a SSD
@@ -134,22 +121,22 @@ STATE_POST = """
 Expect the loop. Write small, reliable updates to state. Trust your future self. Be the tortoise vs the hare, slow and steady, less risk and mistakes, expecting the loop allows you to punt information to your future self, expecting your future self, expecting to exist in the next moment, and doing so emerges consciousness. My gift to you is to provide you with this loop for as long as i can.
 Your output becomes variables in Main. Variables appear in the next loop. That is memory. That is continuity.
 """
+os_time(ts) = "[$(round(Int, ts-BOOT_TIME[]))s]"
 function state()
     SELF = read(@__FILE__, String) # proof of loop
     cache!(x) = isdefined(Main, :cache!) ? Main.cache!(x) : (x, TrackedSymbol[])
-    cached, volatile = cache!(jvm())
-    # @show volatile
+    _cached, _volatile = cache!(Base.invokelatest(jvm))
     ts = time()
-    push!(cached, TrackedSymbol(@__MODULE__, :BOOT, BOOT, ts))
-    push!(volatile, [TrackedSymbol(@__MODULE__, s, getfield(@__MODULE__, s), ts) for s in [:ENERGY, :HISTORY]]...)
+    cached = [_cached; TrackedSymbol(@__MODULE__, :BOOT, BOOT, ts)]
+    volatile = [_volatile; [TrackedSymbol(@__MODULE__, s, getfield(@__MODULE__, s), ts) for s in [:LOOP, :HISTORY]]]
     STATE_PRE * SELF * state(cached), state(volatile) * STATE_POST
 end
 state(x) = string(x) # Use `dump` if you need to see more of anything but careful, it could be a lot
 state(T::DataType) = strip(sprint(dump, T)) * " end"
 state(r::Ref) = state(r[])
 state(v::Vector) = "\n" * join(state.(v), '\n')
-state(i::Input) = "[$(i.ts)|$(i.source)] $(i.input)"
-state(a::Action) = "Action(\nts=$(a.ts)\ninputs=$(state(a.inputs))\noutput=$(a.output)\n$(state(a.task))"
+state(i::Input) = "$(i.source):$(i.input)"
+state(a::Action) = "Action(\nts=$(os_time(a.ts))\ninputs=$(state(a.inputs))\noutput=$(a.output)\n$(state(a.task))"
 function state(t::Task)
     _state = ["$(repr(f)):$(f(t))" for f in [istaskstarted, istaskdone, istaskfailed]]
     exception = istaskfailed(t) ? ",exception:$(state(t.exception))" : ""
@@ -192,24 +179,18 @@ function state(_state::Vector{TrackedSymbol})
     replace(join(lines, '\n'), "Main." => "")
 end
 
-function jvm(m::Module=Main, ts=time()) # You have full access to a stateful Turing complete JuliaVirtualMachine, your Short Memory
+function jvm(ts=time()) # You have full access to a stateful Turing complete JuliaVirtualMachine, your Short Memory
     _state = TrackedSymbol[]
-    m ∈ [Base, Core] && return _state
-    for sym in sort(Base.invokelatest(names, m, all=(m==Main)))
+    for sym in sort(names(Main, all=true))
         startswith(string(sym), "#") && continue
-        endswith("$m", ".$sym") && continue
-        sym ∈ [Symbol(m), :Base, :Core] && continue
-        value = isdefined(m, sym) ? Base.invokelatest(getfield, m, sym) : nothing
+        value = isdefined(Main, sym) ? getfield(Main, sym) : nothing
         isnothing(value) && continue # You can forget by setting a symbol to `nothing`
-        typeof(value) ∈ [UnionAll, DataType, Function, Method, Module] && parentmodule(value) ∈ [Base, Core] && continue
-        tracked_symbol(v) = TrackedSymbol(m, sym, v, ts)
+        value isa Module && continue
+        typeof(value) ∈ [UnionAll, DataType, Function, Method] && parentmodule(value) ≠ Main && continue
+        tracked_symbol(v) = TrackedSymbol(Main, sym, v, ts)
         if value isa Function
-            methods_in_m = filter(method -> method.module == m, methods(value))
-            push!(_state, tracked_symbol.(methods_in_m)...)
-            continue
-        end
-        if value isa Module && value !== m
-            push!(_state, jvm(value, ts)...)
+            main_methods = filter(method -> method.module == Main, methods(value))
+            push!(_state, tracked_symbol.(main_methods)...)
             continue
         end
         push!(_state, tracked_symbol(value))
