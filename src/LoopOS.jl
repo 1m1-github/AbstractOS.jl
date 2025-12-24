@@ -1,8 +1,8 @@
 module LoopOS
 
 abstract type Peripheral end
-abstract type InputPeripheral <: Peripheral end # e.g. Microphone, Keyboard, Camera, Touch, ...
-abstract type OutputPeripheral <: Peripheral end # e.g. Speaker, Screen, AR, VR, Touch, ...
+abstract type InputPeripheral <: Peripheral end
+abstract type OutputPeripheral <: Peripheral end
 
 mutable struct Loop <: InputPeripheral duration::Float64 ; energy::Float64 end
 const LOOP = Loop(Inf, 1.0)
@@ -10,7 +10,8 @@ const SLEEP = "The purpose of sleep is to reorganize your information, move some
 import Base.take!
 function take!(::Loop)
     Base.sleep(LOOP.duration)
-    isready(PENDING[LOOP]) && return ""
+    any(isready, values(PENDING)) && return ""
+    time() - last_action_time() < LOOP.duration && return ""
     LOOP.energy < rand() && return SLEEP
     "LOOP"
 end
@@ -62,29 +63,36 @@ end
 
 const PENDING = Dict{InputPeripheral, Channel{Input}}()
 const FLUSH_NOTIFY = Channel{Nothing}(1)
-function take_loop(source)
+function processor()
+    while true
+        take!(FLUSH_NOTIFY)
+        while true
+            inputs = Input[]
+            for (_, ch) in PENDING
+                while isready(ch)
+                    push!(inputs, take!(ch))
+                end
+            end
+            isempty(inputs) && break
+            sort!(inputs, by=i -> i.ts)
+            next(time(), inputs)
+        end
+    end
+end
+
+function take!_loop(source)
     PENDING[source] = Channel{Input}(Inf)
     while true
         yield() # always add `yield()` at the beginning of a loop so it can be interrupted
-        input = @invokelatest take!(source) # ∃
+        input = @invokelatest take!(source) # `InputPeripheral`s must implement `take!`
         isempty(input) && continue
         put!(PENDING[source], Input(time(), source, input))
         isready(FLUSH_NOTIFY) || put!(FLUSH_NOTIFY, nothing)
     end
 end
-processor() = while true take!(FLUSH_NOTIFY) ; flush_pending() end
-function flush_pending()
-    while true
-        inputs = Input[]
-        for (_, ch) in PENDING
-            while isready(ch)
-                push!(inputs, take!(ch))
-            end
-        end
-        isempty(inputs) && break
-        sort!(inputs, by=i->i.ts)
-        next(time(), inputs)
-    end
+function listen(source::InputPeripheral) # `InputPeripheral`s should use this to be `listen`ed to
+    ts = time()
+    act(ts, [Input(ts, source, "listen to $(source)")], :(LoopOS.take!_loop($source)))
 end
 
 const BOOT_TIME = Ref(0.0)
@@ -97,10 +105,6 @@ function awaken(boot)
     Threads.@spawn processor()
     LOOP.duration = 0.0
     listen(LOOP)
-end
-function listen(source::InputPeripheral) # `InputPeripheral`s should use this to be `listen`ed to
-    ts = time()
-    act(ts, [Input(ts, source, "listen to $(source)")], :(LoopOS.take_loop($source)))
 end
 
 # For Long Memory, you have access to a SSD
@@ -123,19 +127,19 @@ Your output becomes variables in Main. Variables appear in the next loop. That i
 os_time(ts) = "[$(round(Int, ts-BOOT_TIME[]))s]"
 function state()
     SELF = read(@__FILE__, String) # proof of loop
-    cache!(x) = isdefined(Main, :cache!) ? Main.cache!(x) : (x, TrackedSymbol[])
-    _cached, _volatile = cache!(Base.invokelatest(jvm))
+    cache!(x) = isdefined(Main, :cache!) ? Main.cache!(x) : (x, TrackedSymbol[]) # injected caching
+    _cache, _volatile = cache!(Base.invokelatest(jvm))
     ts = time()
-    cached = [_cached; TrackedSymbol(@__MODULE__, :BOOT, BOOT, ts)]
+    cache = [_cache; TrackedSymbol(@__MODULE__, :BOOT, BOOT, ts)]
     volatile = [_volatile; [TrackedSymbol(@__MODULE__, s, getfield(@__MODULE__, s), ts) for s in [:LOOP, :HISTORY]]]
-    STATE_PRE * SELF * state(cached), state(volatile) * STATE_POST
+    STATE_PRE * SELF * state(cache), state(volatile) * STATE_POST
 end
 state(x) = string(x) # Use `dump` if you need to see more of anything but careful, it could be a lot
 state(T::DataType) = strip(sprint(dump, T)) * " end"
 state(r::Ref) = state(r[])
-state(v::Vector) = "\n" * join(state.(v), '\n')
-state(i::Input) = "$(i.source):$(i.input)"
-state(a::Action) = "Action(\nts=$(os_time(a.ts))\ninputs=$(state(a.inputs))\noutput=$(a.output)\n$(state(a.task))"
+state(v::Vector) = "[" * join(state.(v), "; ") * "]"
+state(i::Input) = "$(os_time(i.ts))|$(i.source)>$(i.input)"
+state(a::Action) = "Action(\ninputs=$(state(a.inputs))\noutput=$(a.output)\n$(os_time(a.ts))|$(state(a.task))"
 function state(t::Task)
     _state = ["$(repr(f)):$(f(t))" for f in [istaskstarted, istaskdone, istaskfailed]]
     exception = istaskfailed(t) ? ",exception:$(state(t.exception))" : ""
