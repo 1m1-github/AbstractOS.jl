@@ -69,15 +69,15 @@ function next(ts, inputs)
     t = time()
     try
         output, ΔE = Main.intelligence(;
-            self = read(@__FILE__, String), # proof of loop
+            SELF = read(@__FILE__, String), # proof of loop
             inputs = inputs,
             jvm = Base.invokelatest(jvm),
             loop = LOOP,
             history = HISTORY[]
-        )
+        ) # will send a print of the params to the Transformer and receive the output code
         LOOP.energy -= ΔE
     catch e
-        @error "intelligence", ts, e
+        @error "intelligence", ts, e, sprint(showerror, e, catch_backtrace())
     end
     LOOP.duration = 2 * (time() - t) # Good sleep incentive
     isnothing(output) && return
@@ -124,7 +124,7 @@ function take!_loop(source)
 end
 function listen(source::InputPeripheral) # `InputPeripheral`s should use this to be `listen`ed to
     ts = time()
-    act(ts, [Input(ts, source, "listen to $(source)")], :(LoopOS.take!_loop($source)))
+    act(ts, [Input(ts, source, "listen")], :(LoopOS.take!_loop($source)))
 end
 
 awake() = 0.0 < LOOP.boot_time
