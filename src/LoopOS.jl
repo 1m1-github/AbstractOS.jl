@@ -38,7 +38,7 @@ function jvm(ts=time()) # You have full access to a stateful Turing complete Jul
     for sym in sort(names(Main, all=true))
         startswith(string(sym), "#") && continue
         value = isdefined(Main, sym) ? getfield(Main, sym) : nothing
-        isnothing(value) && continue # You can forget by setting a symbol to `nothing`
+        isnothing(value) && continue # You can forget short memory by setting a symbol to `nothing`
         value isa Module && continue
         typeof(value) ∈ [UnionAll, DataType, Function, Method] && parentmodule(value) ≠ Main && continue
         tracked_symbol(v) = TrackedSymbol(Main, sym, v, ts)
@@ -89,7 +89,7 @@ function take!(::Loop)
     Base.sleep(LOOP.duration)
     any(isready, values(PENDING)) && return ""
     time() - last_action_time() < LOOP.duration && return ""
-    LOOP.energy < rand() && return "The purpose of sleep is to reorganize your information, move some from short (to keep a summary) to long memory (to keep the details), and some from long (explore and) to short (make relevant) memory. Your short memory is the JVM, expensive for energy. Your long memory is a SSD, cheap for energy."
+    LOOP.energy < rand() && return "The purpose of sleep is to reorganize your information, move some from short (to keep a summary) to long memory (to keep the details), and maybe some from long (explore and) to short (make relevant) memory. Your short memory is the JVM, expensive for energy. Your long memory is a SSD, cheap for energy. Prune short memory by *setting* variables to be forgotten to `nothing`."
     "LOOP"
 end
 function hibernate(ΔT)
@@ -135,3 +135,4 @@ function awaken(boot)
 end
 
 end # todo @true mode == provable open source == trustless
+using .LoopOS
