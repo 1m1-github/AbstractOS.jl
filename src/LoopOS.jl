@@ -74,7 +74,7 @@ function next(ts, inputs)
             jvm = Base.invokelatest(jvm),
             loop = LOOP,
             history = HISTORY[]
-        ) # will send a print of the params to the Transformer and receive the output code
+        ) # will send a print of the params to the Transformer and receive the output code; the output of the last Action will only be printed if it erred, else we print Action inputs only
         LOOP.energy -= ΔE
     catch e
         @error "intelligence", ts, e, sprint(showerror, e, catch_backtrace())
@@ -87,9 +87,9 @@ end
 import Base.take!
 function take!(::Loop)
     Base.sleep(LOOP.duration)
+    LOOP.energy < rand() && return "The purpose of sleep is to reorganize your information, move some from short (to keep a summary) to long memory (to keep the details), and maybe some from long (explore and) to short (make relevant) memory. Your short memory is the JVM, expensive for energy. Your long memory is a SSD, cheap for energy. Prune short memory by *setting* variables to be forgotten to `nothing`."
     any(isready, values(PENDING)) && return ""
     time() - last_action_time() < LOOP.duration && return ""
-    LOOP.energy < rand() && return "The purpose of sleep is to reorganize your information, move some from short (to keep a summary) to long memory (to keep the details), and maybe some from long (explore and) to short (make relevant) memory. Your short memory is the JVM, expensive for energy. Your long memory is a SSD, cheap for energy. Prune short memory by *setting* variables to be forgotten to `nothing`."
     "LOOP"
 end
 function hibernate(ΔT)
