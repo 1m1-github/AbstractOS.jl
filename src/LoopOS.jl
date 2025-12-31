@@ -33,13 +33,13 @@ const HISTORY = Ref(Action[])
 const PENDING = Dict{InputPeripheral, Channel{Input}}()
 const FLUSH_NOTIFY = Channel{Nothing}(1)
 
-function jvm(ts=time()) # You have full access to a stateful Turing complete JuliaVirtualMachine, your Short Memory
+function jvm() # You have full access to a stateful Turing complete JuliaVirtualMachine, your Short Memory
+    ts = time()
     _state = TrackedSymbol[]
     for sym in sort(names(Main, all=true))
         startswith(string(sym), "#") && continue
         value = isdefined(Main, sym) ? getfield(Main, sym) : nothing
         isnothing(value) && continue # You can forget short memory by setting a symbol to `nothing`
-        value isa Module && continue
         typeof(value) ∈ [UnionAll, DataType, Function, Method] && parentmodule(value) ≠ Main && continue
         tracked_symbol(v) = TrackedSymbol(Main, sym, v, ts)
         if value isa Function
@@ -70,11 +70,11 @@ function next(ts, inputs)
     try
         output, ΔE = Main.intelligence(;
             SELF = read(@__FILE__, String), # proof of loop
-            inputs = inputs,
-            jvm = Base.invokelatest(jvm),
-            loop = LOOP,
-            history = HISTORY[]
-        ) # will send a print of the params to the Transformer and receive the output code; the output of the last Action will only be printed if it erred, else we print Action inputs only
+            HISTORY = HISTORY[],
+            JVM = Base.invokelatest(jvm),
+            INPUTS = inputs,
+            LOOP = LOOP,
+        ) # this is you
         LOOP.energy -= ΔE
     catch e
         @error "intelligence", ts, e, sprint(showerror, e, catch_backtrace())
@@ -112,7 +112,7 @@ function processor()
         end
     end
 end
-function take!_loop(source)
+function take!_loop(take!, source)
     PENDING[source] = Channel{Input}(Inf)
     while true
         yield() # always add `yield()` at the beginning of a loop so it can be interrupted
@@ -124,7 +124,9 @@ function take!_loop(source)
 end
 function listen(source::InputPeripheral) # `InputPeripheral`s should use this to be `listen`ed to
     ts = time()
-    act(ts, [Input(ts, source, "listen")], :(LoopOS.take!_loop($source)))
+    m = parentmodule(typeof(source))
+    take! = getfield(m, Symbol("take!"))
+    act(ts, [Input(ts, source, "listen")], :(LoopOS.take!_loop($take!, $source)))
 end
 
 awake() = 0.0 < LOOP.boot_time
@@ -135,4 +137,3 @@ function awaken(boot)
 end
 
 end # todo @true mode == provable open source == trustless
-using .LoopOS
