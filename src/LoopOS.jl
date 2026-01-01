@@ -75,7 +75,7 @@ function next(ts, inputs)
             HISTORY = HISTORY[],
             JVM = jvm_state,
             INPUTS = inputs,
-            OUTPUTS = filter(t -> t.value isa OutputPeripheral, jvm_state),
+            OUTPUTS = OutputPeripheral[t.value for t in jvm_state if t.value isa OutputPeripheral],
             LOOP = LOOP,
             STATE_POST = "", # adjusted by `intelligence` as needed
         ) # this is you
@@ -105,9 +105,10 @@ function processor()
         take!(FLUSH_NOTIFY)
         while true
             inputs = Dict{InputPeripheral, Vector{Input}}()
-            for (_, channel) in PENDING
+            for (input, channel) in PENDING
+                !haskey(inputs, input) && ( inputs[input] = [] )
                 while isready(channel)
-                    push!(inputs[channel], take!(channel))
+                    push!(inputs[input], take!(channel))
                 end
             end
             isempty(inputs) && break
