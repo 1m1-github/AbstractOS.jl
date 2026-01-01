@@ -69,11 +69,13 @@ function next(ts, inputs)
     t = time()
     try
         output, ΔE = Main.intelligence(;
+            STATE_PRE = "", # adjusted by `intelligence` as needed
             SELF = read(@__FILE__, String), # proof of loop
             HISTORY = HISTORY[],
             JVM = Base.invokelatest(jvm),
             INPUTS = inputs,
             LOOP = LOOP,
+            STATE_POST = "", # adjusted by `intelligence` as needed
         ) # this is you
         LOOP.energy -= ΔE
     catch e
@@ -112,7 +114,7 @@ function processor()
         end
     end
 end
-function take!_loop(take!, source)
+function take!_loop(source)
     PENDING[source] = Channel{Input}(Inf)
     while true
         yield() # always add `yield()` at the beginning of a loop so it can be interrupted
@@ -124,9 +126,7 @@ function take!_loop(take!, source)
 end
 function listen(source::InputPeripheral) # `InputPeripheral`s should use this to be `listen`ed to
     ts = time()
-    m = parentmodule(typeof(source))
-    take! = getfield(m, Symbol("take!"))
-    act(ts, [Input(ts, source, "listen")], :(LoopOS.take!_loop($take!, $source)))
+    act(ts, [Input(ts, source, "listen")], :(LoopOS.take!_loop($source)))
 end
 
 awake() = 0.0 < LOOP.boot_time
