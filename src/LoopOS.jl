@@ -11,13 +11,13 @@ mutable struct Loop <: InputPeripheral
     boot_time::Float64
 end
 struct Input
-    ts::Float64
     source::InputPeripheral
+    ts::Float64
     input::String
 end
 struct Action
     ts::Float64
-    inputs::Vector{Input}  
+    inputs::Dict{InputPeripheral, Vector{Input}}
     output::String # NEEDS to be Julia, goes directly into `Meta.parseall`
     task::Union{Task,Nothing}
 end
@@ -67,13 +67,15 @@ end
 function next(ts, inputs)
     output = nothing
     t = time()
+    jvm_state = Base.invokelatest(jvm)
     try
         output, ΔE = Main.intelligence(;
             STATE_PRE = "", # adjusted by `intelligence` as needed
             SELF = read(@__FILE__, String), # proof of loop
             HISTORY = HISTORY[],
-            JVM = Base.invokelatest(jvm),
+            JVM = jvm_state,
             INPUTS = inputs,
+            OUTPUTS = filter(t -> t.value isa OutputPeripheral, jvm_state),
             LOOP = LOOP,
             STATE_POST = "", # adjusted by `intelligence` as needed
         ) # this is you
@@ -102,14 +104,13 @@ function processor()
     while true
         take!(FLUSH_NOTIFY)
         while true
-            inputs = Input[]
-            for (_, ch) in PENDING
-                while isready(ch)
-                    push!(inputs, take!(ch))
+            inputs = Dict{InputPeripheral, Vector{Input}}()
+            for (_, channel) in PENDING
+                while isready(channel)
+                    push!(inputs[channel], take!(channel))
                 end
             end
             isempty(inputs) && break
-            sort!(inputs, by=i -> i.ts)
             next(time(), inputs)
         end
     end
@@ -118,15 +119,15 @@ function take!_loop(source)
     PENDING[source] = Channel{Input}(Inf)
     while true
         yield() # always add `yield()` at the beginning of a loop so it can be interrupted
-        input = @invokelatest take!(source) # `InputPeripheral`s must implement `take!`
+        input::String = @invokelatest take!(source) # `InputPeripheral`s must implement `take!`
         isempty(input) && continue
-        put!(PENDING[source], Input(time(), source, input))
+        put!(PENDING[source], Input(source, time(), input))
         isready(FLUSH_NOTIFY) || put!(FLUSH_NOTIFY, nothing)
     end
 end
 function listen(source::InputPeripheral) # `InputPeripheral`s should use this to be `listen`ed to
     ts = time()
-    act(ts, [Input(ts, source, "listen")], :(LoopOS.take!_loop($source)))
+    act(ts, Dict(source => [Input(source, ts, "listen")]), :(LoopOS.take!_loop($source)))
 end
 
 awake() = 0.0 < LOOP.boot_time
