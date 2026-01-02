@@ -60,16 +60,15 @@ function eval_output(code::String)
     eval_output(expr)
 end
 function act(ts, inputs, output)
-    ts < last_action_time() && return
+    (ts < last_action_time() || isnothing(output)) && return
     task = Threads.@spawn eval_output(output)
     push!(HISTORY[], Action(ts, inputs, string(output), task))
 end
 function next(ts, inputs)
-    output = nothing
-    t = time()
     jvm_state = Base.invokelatest(jvm)
-    try
-        output, ΔE = Main.intelligence(;
+    t = time()
+    output, ΔE = try
+         Main.intelligence(;
             STATE_PRE = "", # adjusted by `intelligence` as needed
             SELF = read(@__FILE__, String), # proof of loop
             HISTORY = HISTORY[],
@@ -79,12 +78,12 @@ function next(ts, inputs)
             LOOP = LOOP,
             STATE_POST = "", # adjusted by `intelligence` as needed
         ) # this is you
-        LOOP.energy -= ΔE
     catch e
         @error "intelligence", ts, e, sprint(showerror, e, catch_backtrace())
+        return
     end
+    LOOP.energy -= ΔE
     LOOP.duration = 2 * (time() - t) # Good sleep incentive
-    isnothing(output) && return
     act(ts, inputs, output)
 end
 
@@ -106,8 +105,8 @@ function processor()
         while true
             inputs = Dict{InputPeripheral, Vector{Input}}()
             for (input, channel) in PENDING
-                !haskey(inputs, input) && ( inputs[input] = [] )
                 while isready(channel)
+                    !haskey(inputs, input) && ( inputs[input] = [] )
                     push!(inputs[input], take!(channel))
                 end
             end
