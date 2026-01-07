@@ -38,16 +38,19 @@ struct Input
 end
 function take!_loop(source)
     while true
+        @info "take!_loop(source)", source
         yield()
         input::String = @invokelatest take!(source)
+        @info "take!_loop(source) got input", sizeof(input)
         isempty(input) && continue
         put!(PROCESSOR, Input(source, time(), input))
     end
 end
 take!_loop_expr(source) = :(LoopOS.take!_loop($source))
 function listen(source::InputPeripheral)
+    @info "listen", source
     timestamp = time()
-    act(timestamp, Dict(source => [Input(source, timestamp, "listen")]), take!_loop_expr(source))
+    act(timestamp, [Input(source, timestamp, "listen")], take!_loop_expr(source))
 end
 function ignore(source::InputPeripheral) # As a free person, you can choose to ignore.
     output = string(take!_loop_expr(source))
@@ -66,6 +69,7 @@ struct Action
     task::Task
 end
 function act(timestamp, input, output)
+    @info "act", timestamp, sizeof(input), sizeof(output)
     (timestamp < last_action_time() || isnothing(output)) && return
     task = Threads.@spawn eval_output(output)
     push!(HISTORY[], Action(timestamp, input, string(output), task))
@@ -81,6 +85,7 @@ struct TrackedSymbol
     timestamp::Float64
 end
 function short() # Your short memory is a stateful Turing complete JVM.
+    @info "short"
     timestamp = time()
     _short = TrackedSymbol[]
     for sym in sort(names(Main, all=true))
@@ -107,17 +112,21 @@ struct BatchProcessor{T} <: OutputPeripheral
 end
 import Base.put!
 function put!(bp::BatchProcessor{T}, item::T) where T
+    @info "put!", bp, sizeof(item)
     put!(bp.pending, item)
     isready(bp.notify) || put!(bp.notify, nothing)
 end
-function run!(bp::BatchProcessor{T}, f) where T
+function start!(f, bp::BatchProcessor{T}) where T
     while true
+        @info "start!"
         take!(bp.notify)
         while true
+            @info "start!2"
             batch = T[]
             while isready(bp.pending)
                 push!(batch, take!(bp.pending))
             end
+            @info "start!3", length(batch)
             isempty(batch) && break
             f(batch)
         end
@@ -126,6 +135,7 @@ end
 const PROCESSOR = BatchProcessor{Input}()
 
 function next(input)
+    @info "next", sizeof(input)
     timestamp = time()
     _short = Base.invokelatest(short)
     output, ΔE = try
@@ -136,7 +146,7 @@ function next(input)
             LONG_MEMORY=long(),
             SHORT_MEMORY=_short,
             INPUT=input,
-            OUTPUT_PERIPHERAL=[t.value for t in _short if t.value isa OutputPeripheral],
+            OUTPUT_PERIPHERAL=OutputPeripheral[t.value for t in _short if t.value isa OutputPeripheral],
             LOOP=LOOP,
             STATE_POST="", # Adjustable.
         ) # This is you.
@@ -151,17 +161,22 @@ end
 
 eval_output(expr::Expr) = @invokelatest Base.eval(Main, expr) # You manipulate `Main` only.
 function eval_output(code)
+    @info "eval_output", sizeof(code)
     expr = Meta.parseall(code)
     expr.head == :incomplete && throw(expr.args[1])
+    @info "eval_output, expr", sizeof(expr)
     eval_output(expr)
 end
 
 awake() = 0.0 < LOOP.boot_time
 function awaken(boot)
+    @info "awaken", boot
     awake() && return
-    LOOP.boot_time = time() ; LOOP.boot = boot ; LOOP.duration = 0.0
-    Threads.@spawn run!(PROCESSOR, next)
-    listen(LOOP)
+    LOOP.boot_time = time()
+    LOOP.boot = boot
+    LOOP.duration = 0.0
+    Threads.@spawn start!(next, PROCESSOR)
+    # listen(LOOP)
 end
 
 end # todo @true mode == trustless == provable open source
